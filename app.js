@@ -245,17 +245,16 @@ async function startOnboarding() {
 <img src="https://cdn.prod.website-files.com/67f77c104bf4ada12b7429ad/67f781e4a8c1bd2a97ae8fbe_strove-logo.svg" alt="Strove" class="strove-logo">
 </div>
 
-<strong>Welcome to Strove</strong> 👋
+<strong>Your health, all in one place</strong> 👋
 
-We help you build healthy habits through daily check-ins, activity tracking, challenges, and AI-powered health insights.
+✅ Track health & activity in one view
+✅ Join challenges that build healthy habits
+✅ Earn rewards for positive choices
+✅ Get AI-powered insights & guidance
 
-<div class="welcome-links">
-🌐 <a href="https://www.strove.ai/" target="_blank">www.strove.ai</a>
-</div>
+<a href="https://www.strove.ai/" target="_blank">Learn more at strove.ai →</a>
 
-We'll only message you if you opt in, and you can stop anytime by typing STOP.
-
-To continue, choose an option below.`);
+We only message you if you opt in. Type STOP anytime to unsubscribe.`);
 
     setButtons([
         { label: '✅ I agree – continue', action: 'onboard_agree', type: 'primary' },
