@@ -4,15 +4,24 @@
 // OPENAI CONFIGURATION
 // ==========================================
 
-// API key is loaded from URL parameter or localStorage for demo purposes
-// In production, this would be handled server-side
-let OPENAI_API_KEY = localStorage.getItem('strove_openai_key') || '';
+// API key priority: 1. GitHub secret (injected at build) 2. URL param 3. localStorage
+let OPENAI_API_KEY = '';
 
-// Check URL params for API key (for easy demo sharing)
+// First, check if config was injected by GitHub Actions
+if (typeof window.STROVE_CONFIG !== 'undefined' && window.STROVE_CONFIG.OPENAI_API_KEY) {
+    OPENAI_API_KEY = window.STROVE_CONFIG.OPENAI_API_KEY;
+}
+
+// Check URL params for API key (for easy demo sharing / override)
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('apikey')) {
     OPENAI_API_KEY = urlParams.get('apikey');
     localStorage.setItem('strove_openai_key', OPENAI_API_KEY);
+}
+
+// Fallback to localStorage if nothing else set
+if (!OPENAI_API_KEY) {
+    OPENAI_API_KEY = localStorage.getItem('strove_openai_key') || '';
 }
 
 // ==========================================
