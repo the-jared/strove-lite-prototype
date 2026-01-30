@@ -822,3 +822,149 @@ body {
 .ai-thinking::before {
     content: '🤖';
 }
+
+/* ==========================================
+   CONTENT LIBRARY STYLES
+   ========================================== */
+
+.content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.content-item {
+    display: flex;
+    gap: 12px;
+    background-color: #111b21;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.content-item:hover {
+    background-color: #1a2a32;
+}
+
+.content-thumb {
+    width: 70px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.content-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.content-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e9edef;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.content-meta {
+    font-size: 11px;
+    color: #8696a0;
+}
+
+/* Content Detail View */
+.content-detail {
+    text-align: center;
+}
+
+.content-cover {
+    width: 100%;
+    max-width: 280px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+
+.content-detail h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e9edef;
+    margin-bottom: 8px;
+}
+
+.content-meta-detail {
+    font-size: 12px;
+    color: #00a884;
+    margin-bottom: 8px;
+}
+
+.content-tags {
+    font-size: 11px;
+    color: #8696a0;
+    margin-bottom: 12px;
+}
+
+.content-description {
+    font-size: 13px;
+    color: #aebac1;
+    text-align: left;
+    line-height: 1.5;
+}
+
+/* Video Placeholder */
+.video-placeholder {
+    background: linear-gradient(135deg, #1a2a32 0%, #111b21 100%);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    margin: 12px 0;
+}
+
+.video-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.video-duration {
+    font-size: 14px;
+    color: #8696a0;
+}
+
+/* Article Content */
+.article-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e9edef;
+    text-align: left;
+    margin-top: 12px;
+}
+
+.article-content p {
+    margin-bottom: 12px;
+}
+
+.article-content ul,
+.article-content ol {
+    margin-left: 20px;
+    margin-bottom: 12px;
+}
+
+.article-content li {
+    margin-bottom: 6px;
+}
+
+.article-content h2,
+.article-content h3,
+.article-content h4 {
+    color: #00a884;
+    margin: 16px 0 8px;
+}
+
+.article-content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 12px 0;
+}

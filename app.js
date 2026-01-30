@@ -122,8 +122,12 @@ const FLOWS = {
     HELP: 'help',
     EXTENDED_PROFILE: 'extendedProfile',
     FACE_SCAN: 'faceScan',
-    AI_CHAT: 'aiChat'
+    AI_CHAT: 'aiChat',
+    CONTENT_LIBRARY: 'contentLibrary'
 };
+
+// Content Library API
+const CONTENT_API_URL = 'https://cms.strove.ai/api/library-contents';
 
 // ==========================================
 // DOM ELEMENTS
@@ -573,6 +577,7 @@ async function showMainMenu() {
     setButtons([
         { label: '✅ Check-in', action: 'menu_checkin', type: 'primary' },
         { label: '🤖 AI Insights', action: 'menu_ai' },
+        { label: '📚 Content Library', action: 'menu_content' },
         { label: '📊 Health summary', action: 'menu_summary' },
         { label: '🫀 Face scan', action: 'menu_facescan' },
         { label: '🏆 Challenges', action: 'menu_challenges' },
@@ -1991,6 +1996,334 @@ async function processAIChat(userMessage) {
 }
 
 // ==========================================
+// CONTENT LIBRARY
+// ==========================================
+
+let contentCache = null;
+let contentCategories = [];
+
+async function fetchContentLibrary() {
+    if (contentCache) return contentCache;
+
+    try {
+        const response = await fetch(CONTENT_API_URL);
+        if (!response.ok) throw new Error('Failed to fetch content');
+        const data = await response.json();
+        contentCache = data.data || [];
+
+        // Extract unique categories
+        const catMap = new Map();
+        contentCache.forEach(item => {
+            if (item.category && !catMap.has(item.category.slug)) {
+                catMap.set(item.category.slug, item.category);
+            }
+        });
+        contentCategories = Array.from(catMap.values());
+
+        return contentCache;
+    } catch (error) {
+        console.error('Content Library Error:', error);
+        return [];
+    }
+}
+
+async function showContentLibrary() {
+    AppState.currentFlow = FLOWS.CONTENT_LIBRARY;
+    AppState.flowStep = 0;
+    updateDebugPanel();
+
+    await botMessage("📚 <strong>Content Library</strong>\n\nExplore workouts, recipes, and wellness content.\n\nLoading content...");
+    clearButtons();
+
+    const content = await fetchContentLibrary();
+
+    if (content.length === 0) {
+        await botMessage("Unable to load content right now. Please try again later.");
+        setButtons([
+            { label: 'Try again', action: 'menu_content', type: 'primary' },
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        ]);
+        return;
+    }
+
+    // Show categories
+    await botMessage(`Found <strong>${content.length}</strong> items across ${contentCategories.length} categories.\n\nBrowse by category or see featured content:`);
+
+    const categoryButtons = contentCategories.slice(0, 4).map(cat => ({
+        label: getCategoryEmoji(cat.slug) + ' ' + cat.name,
+        action: 'content_category',
+        value: cat.slug
+    }));
+
+    setButtons([
+        { label: '⭐ Featured', action: 'content_featured', type: 'primary' },
+        ...categoryButtons,
+        { label: '🔍 Search', action: 'content_search' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+function getCategoryEmoji(slug) {
+    const emojis = {
+        'workout': '💪',
+        'recipes': '🍳',
+        'mindfulness': '🧘',
+        'nutrition': '🥗',
+        'sleep': '😴',
+        'fitness': '🏃',
+        'wellness': '✨',
+        'health': '❤️'
+    };
+    return emojis[slug] || '📄';
+}
+
+async function showFeaturedContent() {
+    const content = await fetchContentLibrary();
+
+    // Get items with highest engagement (views + likes)
+    const featured = content
+        .sort((a, b) => (parseInt(b.viewCount) + parseInt(b.likeCount)) - (parseInt(a.viewCount) + parseInt(a.likeCount)))
+        .slice(0, 5);
+
+    await showContentList(featured, '⭐ Featured Content');
+}
+
+async function showContentByCategory(categorySlug) {
+    const content = await fetchContentLibrary();
+    const filtered = content.filter(item => item.category?.slug === categorySlug);
+    const category = contentCategories.find(c => c.slug === categorySlug);
+    const categoryName = category?.name || categorySlug;
+
+    await showContentList(filtered.slice(0, 6), `${getCategoryEmoji(categorySlug)} ${categoryName}`);
+}
+
+async function showContentList(items, title) {
+    if (items.length === 0) {
+        await botMessage(`${title}\n\nNo content found in this category.`);
+        setButtons([
+            { label: '← Back', action: 'menu_content' },
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        ]);
+        return;
+    }
+
+    let contentHtml = `<strong>${title}</strong>\n\n<div class="content-list">`;
+
+    items.forEach((item, index) => {
+        const coverUrl = item.cover?.formats?.thumbnail?.url || item.cover?.url || '';
+        const duration = item.duration?.label || '';
+        const points = item.points?.value ? `🪙 ${item.points.value} pts` : '';
+        const typeIcon = item.type === 'video' ? '🎬' : '📖';
+        const tags = item.tags?.slice(0, 2).map(t => t.name).join(', ') || '';
+
+        contentHtml += `
+<div class="content-item" data-id="${item.documentId}">
+    ${coverUrl ? `<img src="${coverUrl}" alt="${item.title}" class="content-thumb">` : ''}
+    <div class="content-info">
+        <div class="content-title">${typeIcon} ${item.title}</div>
+        <div class="content-meta">${[duration, points, tags].filter(Boolean).join(' • ')}</div>
+    </div>
+</div>`;
+    });
+
+    contentHtml += '</div>';
+
+    await botMessage(contentHtml);
+
+    // Create buttons for each item
+    const itemButtons = items.slice(0, 4).map(item => ({
+        label: (item.type === 'video' ? '🎬 ' : '📖 ') + item.title.substring(0, 20) + (item.title.length > 20 ? '...' : ''),
+        action: 'content_view',
+        value: item.documentId
+    }));
+
+    setButtons([
+        ...itemButtons,
+        { label: '← Back', action: 'menu_content' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+async function showContentDetail(documentId) {
+    const content = await fetchContentLibrary();
+    const item = content.find(c => c.documentId === documentId);
+
+    if (!item) {
+        await botMessage("Content not found.");
+        setButtons([
+            { label: '← Back', action: 'menu_content' },
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        ]);
+        return;
+    }
+
+    const coverUrl = item.cover?.formats?.medium?.url || item.cover?.url || '';
+    const typeIcon = item.type === 'video' ? '🎬' : '📖';
+    const duration = item.duration?.label ? `⏱ ${item.duration.label}` : '';
+    const points = item.points?.value ? `🪙 Earn ${item.points.value} points` : '';
+    const category = item.category?.name || '';
+    const tags = item.tags?.map(t => t.name).join(', ') || '';
+
+    let detailHtml = `
+<div class="content-detail">
+    ${coverUrl ? `<img src="${coverUrl}" alt="${item.title}" class="content-cover">` : ''}
+    <h3>${typeIcon} ${item.title}</h3>
+    <div class="content-meta-detail">
+        ${[category, duration, points].filter(Boolean).join(' • ')}
+    </div>
+    ${tags ? `<div class="content-tags">${tags}</div>` : ''}
+    <p class="content-description">${item.descriptionShort || ''}</p>
+</div>`;
+
+    await botMessage(detailHtml);
+
+    // If it's a video with points, offer to "start" it
+    const buttons = [];
+    if (item.type === 'video' && item.points?.earnable) {
+        buttons.push({ label: '▶️ Start & Earn Points', action: 'content_start', value: documentId, type: 'primary' });
+    } else if (item.type === 'article') {
+        buttons.push({ label: '📖 Read Article', action: 'content_read', value: documentId, type: 'primary' });
+    }
+
+    buttons.push(
+        { label: '❤️ Like', action: 'content_like', value: documentId },
+        { label: '← Back', action: 'menu_content' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+    );
+
+    setButtons(buttons);
+}
+
+async function startContent(documentId) {
+    const content = await fetchContentLibrary();
+    const item = content.find(c => c.documentId === documentId);
+
+    if (!item) return;
+
+    if (item.type === 'video') {
+        await botMessage(`▶️ <strong>Starting: ${item.title}</strong>\n\nFollow along with the video. When you're done, tap "Complete" to earn your points!`);
+
+        // Simulate video player placeholder
+        await delay(500);
+        await botMessage(`<div class="video-placeholder">
+            <div class="video-icon">▶️</div>
+            <div class="video-duration">${item.duration?.label || 'Video'}</div>
+        </div>`);
+
+        setButtons([
+            { label: '✅ Complete & Earn Points', action: 'content_complete', value: documentId, type: 'primary' },
+            { label: '← Back', action: 'content_view', value: documentId }
+        ]);
+    }
+}
+
+async function readArticle(documentId) {
+    const content = await fetchContentLibrary();
+    const item = content.find(c => c.documentId === documentId);
+
+    if (!item) return;
+
+    // Show rich text content if available, otherwise description
+    const articleContent = item.richText || item.descriptionLong || item.descriptionShort || 'No content available.';
+
+    await botMessage(`📖 <strong>${item.title}</strong>\n\n<div class="article-content">${articleContent}</div>`);
+
+    setButtons([
+        { label: '❤️ Like', action: 'content_like', value: documentId },
+        { label: '← Back to Library', action: 'menu_content' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+async function completeContent(documentId) {
+    const content = await fetchContentLibrary();
+    const item = content.find(c => c.documentId === documentId);
+
+    if (!item) return;
+
+    const pointsEarned = item.points?.value || 10;
+    const oldCoins = AppState.coins;
+    AppState.coins += pointsEarned;
+    const milestone = checkCoinMilestone(oldCoins, AppState.coins);
+    saveState();
+
+    let message = `🎉 <strong>Nice work!</strong>\n\nYou completed "${item.title}" and earned <span class="coin-earned">🪙 ${pointsEarned}</span> points!`;
+
+    if (milestone) {
+        message += `\n\n🏆 <strong>Milestone:</strong> ${milestone}`;
+    }
+
+    await botMessage(message);
+
+    setButtons([
+        { label: '📚 More Content', action: 'menu_content', type: 'primary' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+    ]);
+
+    updateDebugPanel();
+}
+
+async function likeContent(documentId) {
+    await botMessage("❤️ Liked! Thanks for the feedback.");
+
+    setButtons([
+        { label: '📚 More Content', action: 'menu_content', type: 'primary' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+async function handleContentSearch() {
+    AppState.flowStep = 1; // Search mode
+    await botMessage("🔍 What would you like to find?\n\nType a keyword (e.g., 'yoga', 'breakfast', 'strength')");
+    clearButtons();
+}
+
+async function searchContent(query) {
+    const content = await fetchContentLibrary();
+    const lowerQuery = query.toLowerCase();
+
+    const results = content.filter(item =>
+        item.title?.toLowerCase().includes(lowerQuery) ||
+        item.descriptionShort?.toLowerCase().includes(lowerQuery) ||
+        item.tags?.some(t => t.name.toLowerCase().includes(lowerQuery)) ||
+        item.category?.name?.toLowerCase().includes(lowerQuery)
+    );
+
+    await showContentList(results.slice(0, 6), `🔍 Results for "${query}"`);
+}
+
+function handleContentAction(action, value) {
+    switch (action) {
+        case 'content_featured':
+            showFeaturedContent();
+            break;
+        case 'content_category':
+            showContentByCategory(value);
+            break;
+        case 'content_view':
+            showContentDetail(value);
+            break;
+        case 'content_start':
+            startContent(value);
+            break;
+        case 'content_read':
+            readArticle(value);
+            break;
+        case 'content_complete':
+            completeContent(value);
+            break;
+        case 'content_like':
+            likeContent(value);
+            break;
+        case 'content_search':
+            handleContentSearch();
+            break;
+        default:
+            showContentLibrary();
+    }
+}
+
+// ==========================================
 // SETTINGS
 // ==========================================
 
@@ -2199,6 +2532,12 @@ function handleButtonClick(action, value) {
         return;
     }
 
+    // Content Library actions
+    if (action.startsWith('content_')) {
+        handleContentAction(action, value);
+        return;
+    }
+
     // Flow-specific actions
     switch (AppState.currentFlow) {
         case FLOWS.ONBOARDING:
@@ -2255,6 +2594,9 @@ function handleMenuAction(action) {
             break;
         case 'ai':
             startAIChat();
+            break;
+        case 'content':
+            showContentLibrary();
             break;
         case 'summary':
             showHealthSummary();
@@ -2342,6 +2684,13 @@ function handleTextInput(input) {
 
         case 'support_describe':
             handleSupportDescription(trimmed);
+            break;
+
+        case FLOWS.CONTENT_LIBRARY:
+            // Search mode - user typed a search query
+            if (AppState.flowStep === 1) {
+                searchContent(trimmed);
+            }
             break;
 
         case FLOWS.MAIN_MENU:
