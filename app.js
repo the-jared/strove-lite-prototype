@@ -2234,6 +2234,21 @@ async function openContent(item) {
     // Use full item if available, otherwise fall back to list item
     const contentItem = fullItem || item;
 
+    // Debug: log available fields for video/audio content
+    if (contentItem.type === 'video' || contentItem.type === 'audio' || contentItem.type === 'podcast') {
+        console.log('Content item fields:', {
+            type: contentItem.type,
+            actions: contentItem.actions,
+            url: contentItem.url,
+            videoUrl: contentItem.videoUrl,
+            audioUrl: contentItem.audioUrl,
+            externalUrl: contentItem.externalUrl,
+            media: contentItem.media,
+            video: contentItem.video,
+            audio: contentItem.audio
+        });
+    }
+
     const typeIcon = getContentTypeIcon(contentItem.type);
     const coverUrl = contentItem.cover?.formats?.medium?.url || contentItem.cover?.url || '';
     const duration = contentItem.duration?.label ? `⏱ ${contentItem.duration.label}` : '';
@@ -2254,8 +2269,26 @@ async function openContent(item) {
 }
 
 async function showVideoContent(item, coverUrl, duration, points, category) {
-    // Build video URL - check for various URL fields in the CMS data
-    const videoUrl = item.videoUrl || item.url || item.externalUrl || `https://cms.strove.ai/content/${item.slug}`;
+    // Build video URL - check actions array first, then other URL fields
+    let videoUrl = null;
+
+    // Check actions array for video URL (primary source from CMS)
+    if (item.actions && Array.isArray(item.actions)) {
+        const videoAction = item.actions.find(a => a.url || a.link);
+        if (videoAction) {
+            videoUrl = videoAction.url || videoAction.link;
+        }
+    }
+
+    // Fallback to other URL fields
+    if (!videoUrl) {
+        videoUrl = item.videoUrl || item.video?.url || item.media?.url || item.url || item.externalUrl;
+    }
+
+    // Final fallback (should rarely be needed)
+    if (!videoUrl) {
+        videoUrl = `https://cms.strove.ai/content/${item.slug}`;
+    }
 
     let videoHtml = `🎬 <strong>${item.title}</strong>\n\n`;
 
@@ -2293,8 +2326,26 @@ async function showVideoContent(item, coverUrl, duration, points, category) {
 }
 
 async function showAudioContent(item, coverUrl, duration, points, category) {
-    // Build audio URL
-    const audioUrl = item.audioUrl || item.url || item.externalUrl || `https://cms.strove.ai/content/${item.slug}`;
+    // Build audio URL - check actions array first, then other URL fields
+    let audioUrl = null;
+
+    // Check actions array for audio URL (primary source from CMS)
+    if (item.actions && Array.isArray(item.actions)) {
+        const audioAction = item.actions.find(a => a.url || a.link);
+        if (audioAction) {
+            audioUrl = audioAction.url || audioAction.link;
+        }
+    }
+
+    // Fallback to other URL fields
+    if (!audioUrl) {
+        audioUrl = item.audioUrl || item.audio?.url || item.media?.url || item.url || item.externalUrl;
+    }
+
+    // Final fallback (should rarely be needed)
+    if (!audioUrl) {
+        audioUrl = `https://cms.strove.ai/content/${item.slug}`;
+    }
 
     let audioHtml = `🎧 <strong>${item.title}</strong>\n\n`;
 
