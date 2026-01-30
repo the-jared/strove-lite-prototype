@@ -127,6 +127,69 @@ const FLOWS = {
 };
 
 // ==========================================
+// WHATSAPP COMPATIBILITY SETTINGS
+// ==========================================
+
+const WHATSAPP_LIMITS = {
+    MAX_BUTTONS: 3,           // WhatsApp allows max 3 reply buttons
+    MAX_LIST_ITEMS: 10,       // List messages can have up to 10 items
+    MAX_BUTTON_TEXT: 20,      // Button text max 20 characters
+    MAX_LIST_TITLE: 24,       // List item title max 24 characters
+    MAX_LIST_DESC: 72,        // List item description max 72 characters
+    MAX_MESSAGE_LENGTH: 1600, // Text message max length
+    MAX_CAROUSEL_CARDS: 10,   // Carousel templates max 10 cards
+    MAX_CAROUSEL_BODY: 160    // Carousel card body max 160 characters
+};
+
+// Web App URLs for features that need browser fallback
+const WEB_APP_URLS = {
+    FACE_SCAN: 'https://app.strove.ai/face-scan',
+    CONNECT_APP: 'https://app.strove.ai/connect',
+    DASHBOARD: 'https://app.strove.ai/dashboard',
+    REWARDS: 'https://app.strove.ai/rewards'
+};
+
+// WhatsApp text formatting helpers (WhatsApp markdown)
+function bold(text) {
+    return `*${text}*`;
+}
+
+function italic(text) {
+    return `_${text}_`;
+}
+
+function strike(text) {
+    return `~${text}~`;
+}
+
+function mono(text) {
+    return `\`\`\`${text}\`\`\``;
+}
+
+// Progress bar using text characters (WhatsApp compatible)
+function textProgressBar(current, total, length = 10) {
+    const percentage = Math.min(100, Math.round((current / total) * 100));
+    const filled = Math.round((percentage / 100) * length);
+    const empty = length - filled;
+    const bar = '█'.repeat(filled) + '░'.repeat(empty);
+    return `${bar} ${percentage}%`;
+}
+
+// Truncate text to WhatsApp limits
+function truncateForButton(text, maxLen = WHATSAPP_LIMITS.MAX_BUTTON_TEXT) {
+    if (text.length <= maxLen) return text;
+    return text.substring(0, maxLen - 3) + '...';
+}
+
+function truncateForListTitle(text) {
+    return truncateForButton(text, WHATSAPP_LIMITS.MAX_LIST_TITLE);
+}
+
+function truncateForListDesc(text) {
+    return truncateForButton(text, WHATSAPP_LIMITS.MAX_LIST_DESC);
+}
+
+// ==========================================
 // TRANSLATIONS
 // ==========================================
 
@@ -934,29 +997,30 @@ async function showMainMenu() {
     AppState.currentFlow = FLOWS.MAIN_MENU;
     updateDebugPanel();
 
-    // Show personalized menu header with stats
+    // Show personalized menu header with stats (WhatsApp compatible - plain text)
     const greeting = AppState.user.firstName
         ? t('hey_name', { name: AppState.user.firstName })
         : t('what_to_do');
-    const streakBadge = AppState.streak > 0 ? `🔥 ${AppState.streak}` : '';
-    const coinsBadge = t('coins_label', { count: AppState.coins });
+    const streakBadge = AppState.streak > 0 ? `🔥 ${AppState.streak} day streak` : '';
+    const coinsBadge = `🪙 ${AppState.coins} coins`;
     const statsLine = [streakBadge, coinsBadge].filter(Boolean).join(' • ');
 
-    await botMessage(`${greeting} ${statsLine ? `<div class="menu-stats">${statsLine}</div>` : ''}`);
+    // WhatsApp-compatible menu message
+    await botMessage(`${greeting}\n${statsLine}\n\n*What would you like to do?*\nTap a button below or type the number.`);
 
+    // WhatsApp List Message format: max 10 items
+    // Grouped logically for easy scanning
     setButtons([
-        { label: t('menu_checkin'), action: 'menu_checkin', type: 'primary' },
-        { label: t('menu_ai'), action: 'menu_ai' },
-        { label: t('menu_content'), action: 'menu_content' },
-        { label: t('menu_health'), action: 'menu_summary' },
-        { label: t('menu_facescan'), action: 'menu_facescan' },
-        { label: t('menu_challenges'), action: 'menu_challenges' },
-        { label: t('menu_score'), action: 'menu_score' },
-        { label: t('menu_activity'), action: 'menu_log' },
-        { label: t('menu_coins'), action: 'menu_coins' },
-        { label: t('menu_meal'), action: 'menu_meal' },
-        { label: t('menu_settings'), action: 'menu_settings' },
-        { label: t('menu_help'), action: 'menu_help' }
+        { label: '1. ✅ Check-in', action: 'menu_checkin', type: 'primary' },
+        { label: '2. 📊 Health Summary', action: 'menu_summary' },
+        { label: '3. 🏆 Challenges', action: 'menu_challenges' },
+        { label: '4. 🏃 Log Activity', action: 'menu_log' },
+        { label: '5. 🍽 Meal Scan', action: 'menu_meal' },
+        { label: '6. 🪙 Coins', action: 'menu_coins' },
+        { label: '7. 📚 Content', action: 'menu_content' },
+        { label: '8. 🤖 AI Chat', action: 'menu_ai' },
+        { label: '9. ⚙️ Settings', action: 'menu_settings' },
+        { label: '0. ❓ Help', action: 'menu_help' }
     ]);
 }
 
@@ -994,12 +1058,12 @@ async function startCheckIn() {
 }
 
 async function showCheckInQ1() {
-    await botMessage(t('checkin_sleep'));
+    // WhatsApp: Max 3 buttons - combine skip into message
+    await botMessage(t('checkin_sleep') + '\n_(Type "skip" to skip)_');
     setButtons([
-        { label: t('sleep_poor'), action: 'sleep', value: 1 },
-        { label: t('sleep_ok'), action: 'sleep', value: 3 },
-        { label: t('sleep_great'), action: 'sleep', value: 5 },
-        { label: t('btn_skip'), action: 'sleep', value: null, type: 'secondary' }
+        { label: '😫 Poor', action: 'sleep', value: 1 },
+        { label: '😐 OK', action: 'sleep', value: 3 },
+        { label: '😴 Great', action: 'sleep', value: 5 }
     ]);
 }
 
@@ -1015,63 +1079,62 @@ async function handleCheckInStep(action, value) {
             break;
 
         case 1: // Sleep
-            addMessage(value ? [t('sleep_poor'), '', t('sleep_ok'), '', t('sleep_great')][value - 1] : t('btn_skip'), true);
+            addMessage(value ? ['😫 Poor', '', '😐 OK', '', '😴 Great'][value - 1] : 'Skipped', true);
             AppState.tempData.sleep = value;
             AppState.flowStep = 2;
-            await botMessage(t('checkin_stress'));
+            // WhatsApp: Max 3 buttons
+            await botMessage(t('checkin_stress') + '\n_(Type "skip" to skip)_');
             setButtons([
-                { label: t('stress_low'), action: 'stress', value: 1 },
-                { label: t('stress_moderate'), action: 'stress', value: 3 },
-                { label: t('stress_high'), action: 'stress', value: 5 },
-                { label: t('btn_skip'), action: 'stress', value: null, type: 'secondary' }
+                { label: '😌 Low', action: 'stress', value: 1 },
+                { label: '😐 Moderate', action: 'stress', value: 3 },
+                { label: '😰 High', action: 'stress', value: 5 }
             ]);
             break;
 
         case 2: // Stress
-            addMessage(value ? [t('stress_low'), '', t('stress_moderate'), '', t('stress_high')][value - 1] : t('btn_skip'), true);
+            addMessage(value ? ['😌 Low', '', '😐 Moderate', '', '😰 High'][value - 1] : 'Skipped', true);
             AppState.tempData.stress = value;
             AppState.flowStep = 3;
+            // WhatsApp: 2 buttons is fine
             await botMessage(t('checkin_active'));
             setButtons([
-                { label: t('activity_yes'), action: 'active', value: 'yes' },
-                { label: t('activity_no'), action: 'active', value: 'no' }
+                { label: '✅ Yes', action: 'active', value: 'yes' },
+                { label: '❌ Not yet', action: 'active', value: 'no' }
             ]);
             break;
 
         case 3: // Activity plan
-            addMessage(value === 'yes' ? t('activity_yes') : t('activity_no'), true);
+            addMessage(value === 'yes' ? '✅ Yes' : '❌ Not yet', true);
             AppState.tempData.activePlan = value;
             AppState.flowStep = 5; // Skip diet, go to mood
-            await botMessage(t('checkin_mood'));
+            // WhatsApp: Max 3 buttons - show top options
+            await botMessage(t('checkin_mood') + '\n_(Type "skip" to skip)_');
             setButtons([
-                { label: t('mood_great'), action: 'mood', value: 5 },
-                { label: t('mood_good'), action: 'mood', value: 4 },
-                { label: t('mood_okay'), action: 'mood', value: 3 },
-                { label: t('mood_low'), action: 'mood', value: 2 },
-                { label: t('btn_skip'), action: 'mood', value: null, type: 'secondary' }
+                { label: '😊 Great', action: 'mood', value: 5 },
+                { label: '😐 Okay', action: 'mood', value: 3 },
+                { label: '😔 Low', action: 'mood', value: 1 }
             ]);
             break;
 
         case 4: // Diet (skipped for now)
-            addMessage(value ? ['Poor', 'Okay', 'Good'][value - 1] : t('btn_skip'), true);
+            addMessage(value ? ['Poor', 'Okay', 'Good'][value - 1] : 'Skipped', true);
             AppState.tempData.diet = value;
             AppState.flowStep = 5;
-            await botMessage(t('checkin_mood'));
+            // WhatsApp: Max 3 buttons
+            await botMessage(t('checkin_mood') + '\n_(Type "skip" to skip)_');
             setButtons([
-                { label: t('mood_great'), action: 'mood', value: 5 },
-                { label: t('mood_good'), action: 'mood', value: 4 },
-                { label: t('mood_okay'), action: 'mood', value: 3 },
-                { label: t('mood_low'), action: 'mood', value: 2 },
-                { label: t('btn_skip'), action: 'mood', value: null, type: 'secondary' }
+                { label: '😊 Great', action: 'mood', value: 5 },
+                { label: '😐 Okay', action: 'mood', value: 3 },
+                { label: '😔 Low', action: 'mood', value: 1 }
             ]);
             break;
 
         case 5: // Mood
             if (value) {
-                const moodLabels = ['', '', t('mood_low'), t('mood_okay'), t('mood_good'), t('mood_great')];
-                addMessage(moodLabels[value], true);
+                const moodLabels = ['😔 Low', '', '', '😐 Okay', '', '😊 Great'];
+                addMessage(moodLabels[value] || `Mood: ${value}`, true);
             } else {
-                addMessage(t('btn_skip'), true);
+                addMessage('Skipped', true);
             }
             AppState.tempData.mood = value;
             completeCheckIn();
@@ -1132,8 +1195,9 @@ async function completeCheckIn() {
         streakMessage = t('checkin_streak', { days: AppState.streak });
     }
 
-    let milestoneMessage = coinMilestone ? `\n\n🎉 <strong>Milestone:</strong> ${coinMilestone}` : '';
-    await botMessage(`${celebration}\n\n${empathyNote}Today's focus:\n${focusAction}\n\nYou earned <span class="coin-earned">🪙 ${coinsEarned}</span> coins.\n${streakMessage}${milestoneMessage}`);
+    // WhatsApp compatible - plain text, no HTML
+    let milestoneMessage = coinMilestone ? `\n\n🎉 *Milestone:* ${coinMilestone}` : '';
+    await botMessage(`${celebration}\n\n${empathyNote}*Today's focus:*\n${focusAction}\n\nYou earned 🪙 *${coinsEarned} coins*\n${streakMessage}${milestoneMessage}`);
 
     AppState.tempData = {};
     saveState();
@@ -1191,103 +1255,87 @@ async function showHealthSummary() {
         ? (meals.reduce((sum, m) => sum + m.score, 0) / meals.length).toFixed(1)
         : 'N/A';
 
-    // Calculate step trend and week-over-week comparisons
+    // Calculate step trend - WhatsApp compatible (plain text)
     const recentSteps = data.dailySteps.slice(-3);
     const earlierSteps = data.dailySteps.slice(0, 3);
     const recentAvg = recentSteps.reduce((a, b) => a + b, 0) / recentSteps.length;
     const earlierAvg = earlierSteps.reduce((a, b) => a + b, 0) / earlierSteps.length;
     const stepChange = Math.round(((recentAvg - earlierAvg) / earlierAvg) * 100);
-    const stepTrend = stepChange > 5 ? `<span class="trend-up">↑ ${stepChange}%</span>` :
-                      stepChange < -5 ? `<span class="trend-down">↓ ${Math.abs(stepChange)}%</span>` :
-                      '<span class="trend-stable">→ stable</span>';
+    const stepTrend = stepChange > 5 ? `↑ ${stepChange}%` :
+                      stepChange < -5 ? `↓ ${Math.abs(stepChange)}%` : '→ stable';
 
     // Simulated last week comparisons
     const lastWeekMinutes = Math.round(data.activeMinutes * 0.85);
     const minutesChange = Math.round(((data.activeMinutes - lastWeekMinutes) / lastWeekMinutes) * 100);
-    const minutesTrend = minutesChange > 0 ? `<span class="trend-up">↑ ${minutesChange}% vs last week</span>` :
-                         minutesChange < 0 ? `<span class="trend-down">↓ ${Math.abs(minutesChange)}%</span>` : '';
+    const minutesTrend = minutesChange > 0 ? `↑ ${minutesChange}%` : minutesChange < 0 ? `↓ ${Math.abs(minutesChange)}%` : '';
 
-    await botMessage(`📊 <strong>Your Weekly Health Summary</strong>
+    // WhatsApp compatible - plain text with WhatsApp markdown (*bold*, _italic_)
+    await botMessage(`📊 *Your Weekly Health Summary*
 
-<div class="summary-card">
-<div class="summary-section">
-<strong>🏃 Activity</strong>
-• Active minutes: <strong>${data.activeMinutes} min</strong> ${minutesTrend}
-• Total steps: <strong>${data.steps.toLocaleString()}</strong> ${stepTrend}
-• Distance: <strong>${data.distance} km</strong>
-• Workouts: <strong>${data.workouts.length}</strong> sessions
-</div>
+*🏃 Activity*
+• Active minutes: *${data.activeMinutes} min* ${minutesTrend}
+• Total steps: *${data.steps.toLocaleString()}* ${stepTrend}
+• Distance: *${data.distance} km*
+• Workouts: *${data.workouts.length}* sessions
 
-<div class="summary-section">
-<strong>❤️ Vitals</strong>
-• Avg heart rate: <strong>${data.heartRateAvg}</strong> beats per minute
-• Resting HR: <strong>${data.restingHR}</strong> bpm
-• Calories burned: ~<strong>${data.calories}/day</strong>
-</div>
+*❤️ Vitals*
+• Avg heart rate: *${data.heartRateAvg}* bpm
+• Resting HR: *${data.restingHR}* bpm
+• Calories: ~*${data.calories}/day*
 
-<div class="summary-section">
-<strong>😴 Sleep</strong>
-• Average: <strong>${data.avgSleep}</strong>
-• Quality score: <strong>${data.sleepQuality}/100</strong>
-</div>
+*😴 Sleep*
+• Average: *${data.avgSleep}*
+• Quality: *${data.sleepQuality}/100*
 
-<div class="summary-section">
-<strong>🍽 Nutrition</strong>
-• Meals logged: <strong>${meals.length}</strong>
-• Average score: <strong>${avgMealScore}/10</strong>
-</div>
-</div>
+*🍽 Nutrition*
+• Meals logged: *${meals.length}*
+• Avg score: *${avgMealScore}/10*
 
-🔥 <strong>Streak:</strong> ${AppState.streak} days`);
+🔥 *Streak:* ${AppState.streak} days`);
 
     await delay(500);
 
     // Show workout breakdown
     if (data.workouts.length > 0) {
         const workoutList = data.workouts.map(w => `• ${w.day}: ${w.type} (${w.duration}min)`).join('\n');
-        await botMessage(`💪 <strong>This Week's Workouts</strong>\n\n${workoutList}`);
+        await botMessage(`💪 *This Week's Workouts*\n\n${workoutList}`);
     }
 
+    // WhatsApp: Max 3 buttons
     setButtons([
-        { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
-        { label: 'Monthly summary', action: 'monthly_summary' },
-        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
+        { label: '🤖 AI Insights', action: 'menu_ai', type: 'primary' },
+        { label: '📅 Monthly', action: 'monthly_summary' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
 async function showMonthlySummary() {
     const data = AppState.weeklyActivity;
 
-    await botMessage(`📊 <strong>Your Monthly Health Summary</strong>
+    // WhatsApp compatible - plain text
+    await botMessage(`📊 *Your Monthly Health Summary*
 
-<div class="summary-card">
-<div class="summary-section">
-<strong>🏃 Activity (30 days)</strong>
-• Active minutes: <strong>${data.activeMinutes * 4} min</strong>
-• Total steps: <strong>${(data.steps * 4).toLocaleString()}</strong>
-• Distance: <strong>${(data.distance * 4).toFixed(1)} km</strong>
-• Avg daily steps: <strong>${Math.round(data.steps * 4 / 30).toLocaleString()}</strong>
-</div>
+*🏃 Activity (30 days)*
+• Active minutes: *${data.activeMinutes * 4} min*
+• Total steps: *${(data.steps * 4).toLocaleString()}*
+• Distance: *${(data.distance * 4).toFixed(1)} km*
+• Avg daily: *${Math.round(data.steps * 4 / 30).toLocaleString()} steps*
 
-<div class="summary-section">
-<strong>😴 Sleep</strong>
-• Average: <strong>${data.avgSleep}</strong>
-• Quality trend: <strong>Stable</strong>
-</div>
+*😴 Sleep*
+• Average: *${data.avgSleep}*
+• Trend: *Stable*
 
-<div class="summary-section">
-<strong>🎯 Progress</strong>
-• Check-in streak: <strong>${AppState.streak} days</strong>
-• Coins earned: <strong>${AppState.coins} 🪙</strong>
-</div>
-</div>
+*🎯 Progress*
+• Streak: *${AppState.streak} days* 🔥
+• Coins: *${AppState.coins}* 🪙
 
-💡 <strong>Tip:</strong> Consistency matters more than intensity. Keep showing up!`);
+💡 *Tip:* Consistency matters more than intensity!`);
 
+    // WhatsApp: Max 3 buttons
     setButtons([
-        { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
-        { label: 'Weekly summary', action: 'menu_summary' },
-        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
+        { label: '🤖 AI Insights', action: 'menu_ai', type: 'primary' },
+        { label: '📊 Weekly', action: 'menu_summary' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1305,13 +1353,19 @@ async function showChallenges() {
         return;
     }
 
-    await botMessage("🏆 This month's challenge\n\n<strong>Move More February</strong>\n\nMove 150 minutes this month.\n\nWant to join?");
+    // WhatsApp compatible
+    await botMessage(`🏆 *This Month's Challenge*
 
+*Move More February*
+Move 150 minutes this month.
+
+Want to join?`);
+
+    // WhatsApp: Max 3 buttons
     setButtons([
-        { label: 'Join challenge', action: 'join_challenge', type: 'primary' },
-        { label: 'My progress', action: 'challenge_progress' },
-        { label: 'Reminder settings', action: 'challenge_reminders' },
-        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
+        { label: '✅ Join', action: 'join_challenge', type: 'primary' },
+        { label: '📊 Progress', action: 'challenge_progress' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1344,15 +1398,19 @@ async function showChallengeProgress() {
     const target = AppState.challengeTarget;
     const percentage = Math.min(100, Math.round((progress / target) * 100));
 
-    let status = "On track";
-    if (percentage < 30) status = "A little behind";
-    if (percentage > 70) status = "Great pace! 🔥";
+    let status = "📈 On track";
+    if (percentage < 30) status = "📉 A little behind";
+    if (percentage > 70) status = "🔥 Great pace!";
 
-    await botMessage(`🏃 Your progress\n\n• Active minutes: ${progress} / ${target}\n• Days active: ${Math.floor(progress / 20)}\n\n<div class="progress-bar"><div class="progress-fill" style="width: ${percentage}%"></div></div>\n\n${status}`);
+    // WhatsApp compatible: text-based progress bar instead of CSS
+    const progressBar = textProgressBar(progress, target, 10);
 
+    await botMessage(`🏃 ${bold('Your Challenge Progress')}\n\n${progressBar}\n${progress} of ${target} active minutes\n\nDays active: ${Math.floor(progress / 20)}\n\n${status}`);
+
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: 'Log activity', action: 'menu_log', type: 'primary' },
-        { label: 'Health summary', action: 'menu_summary' },
+        { label: '🏃 Log activity', action: 'menu_log', type: 'primary' },
+        { label: '📊 Health summary', action: 'menu_summary' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -1375,10 +1433,11 @@ async function showMyScore() {
 
     // Check data availability
     if (AppState.user.connectedApps.length === 0 && !AppState.checkInToday) {
-        await botMessage("⭐ Your Strove Score\n\nWe need a bit more data to calculate your score reliably.\n\nConnect a fitness app or log activity manually for a few days.");
+        await botMessage(`⭐ ${bold('Your Strove Score')}\n\nWe need a bit more data to calculate your score reliably.\n\nConnect a fitness app or log activity manually for a few days.`);
+        // WhatsApp: max 3 buttons
         setButtons([
-            { label: '🔗 Connect', action: 'goto_connect', type: 'primary' },
-            { label: 'Log activity', action: 'menu_log' },
+            { label: '🔗 Connect app', action: 'goto_connect', type: 'primary' },
+            { label: '🏃 Log activity', action: 'menu_log' },
             { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
         return;
@@ -1389,14 +1448,19 @@ async function showMyScore() {
     const streakBonus = Math.min(AppState.streak * 2, 20);
     const activityBonus = AppState.checkInToday ? 10 : 0;
     const score = baseScore + streakBonus + activityBonus;
-    const change = AppState.streak > 3 ? '+5' : '-2';
-    const progress = score;
+    const changeValue = AppState.streak > 3 ? 5 : -2;
+    const changeIcon = changeValue > 0 ? '⬆️' : '⬇️';
+    const changeText = changeValue > 0 ? `+${changeValue}` : `${changeValue}`;
 
-    await botMessage(`⭐ Your Strove Score\n\n<div class="score-circle" style="--progress: ${progress}%"><div class="score-inner">${score}</div></div>\n\nChange: ${change} this week\n\nTop drivers (this week):\n• Check-in consistency\n• Activity levels\n\nNext best action: Complete tomorrow's check-in to maintain your streak.`);
+    // WhatsApp compatible: text-based score display instead of CSS circle
+    const scoreBar = textProgressBar(score, 100, 10);
 
+    await botMessage(`⭐ ${bold('Your Strove Score')}\n\n${bold(String(score))} / 100\n${scoreBar}\n\n${changeIcon} ${changeText} this week\n\n${bold('Top drivers:')}\n• Check-in consistency\n• Activity levels\n\n${italic('Next: Complete tomorrow\'s check-in to maintain your streak.')}`);
+
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: 'Improve my score', action: 'improve_score', type: 'primary' },
-        { label: 'Health summary', action: 'menu_summary' },
+        { label: '📈 Improve score', action: 'improve_score', type: 'primary' },
+        { label: '📊 Health summary', action: 'menu_summary' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -1434,13 +1498,12 @@ async function handleLogActivityStep(action, value) {
         case 0: // Choice
             if (action === 'log_manual') {
                 AppState.flowStep = 1;
-                await botMessage("What did you do?");
+                // WhatsApp: max 3 buttons - most common activities
+                await botMessage(`What type of activity?\n\n${italic('Choose below or type your own (e.g., "Yoga", "Swimming")')}`);
                 setButtons([
-                    { label: '🚶 Walk', action: 'activity_type', value: 'Walk' },
-                    { label: '🏃 Run', action: 'activity_type', value: 'Run' },
-                    { label: '🚴 Cycle', action: 'activity_type', value: 'Cycle' },
+                    { label: '🚶 Walk/Run', action: 'activity_type', value: 'Walk/Run' },
                     { label: '💪 Strength', action: 'activity_type', value: 'Strength' },
-                    { label: 'Other', action: 'activity_type', value: 'Other' }
+                    { label: '🚴 Other', action: 'activity_type', value: 'Other' }
                 ]);
             }
             break;
@@ -1449,14 +1512,12 @@ async function handleLogActivityStep(action, value) {
             addMessage(value, true);
             AppState.tempData.activityType = value;
             AppState.flowStep = 2;
-            await botMessage("How long?");
+            // WhatsApp: max 3 buttons - group durations
+            await botMessage("How long?\n\n${italic('Or type a custom duration like \"45m\" or \"1h\"')}");
             setButtons([
-                { label: '10 min', action: 'activity_duration', value: 10 },
-                { label: '20 min', action: 'activity_duration', value: 20 },
-                { label: '30 min', action: 'activity_duration', value: 30 },
-                { label: '45 min', action: 'activity_duration', value: 45 },
-                { label: '60+ min', action: 'activity_duration', value: 60 },
-                { label: 'Custom', action: 'activity_custom', type: 'secondary' }
+                { label: '15-30 min', action: 'activity_duration', value: 25 },
+                { label: '30-60 min', action: 'activity_duration', value: 45 },
+                { label: '60+ min', action: 'activity_duration', value: 75 }
             ]);
             break;
 
@@ -1511,12 +1572,12 @@ function parseDuration(input) {
 }
 
 async function showIntensityQuestion() {
-    await botMessage("How hard did it feel?");
+    // WhatsApp: max 3 buttons
+    await botMessage(`How hard did it feel?\n\n${italic('Reply "skip" to skip this question')}`);
     setButtons([
-        { label: 'Easy', action: 'activity_intensity', value: 'Easy' },
-        { label: 'Moderate', action: 'activity_intensity', value: 'Moderate' },
-        { label: 'Hard', action: 'activity_intensity', value: 'Hard' },
-        { label: 'Skip', action: 'activity_intensity', value: null, type: 'secondary' }
+        { label: '😌 Easy', action: 'activity_intensity', value: 'Easy' },
+        { label: '💪 Moderate', action: 'activity_intensity', value: 'Moderate' },
+        { label: '🔥 Hard', action: 'activity_intensity', value: 'Hard' }
     ]);
 }
 
@@ -1559,31 +1620,39 @@ async function startConnectApp() {
     AppState.flowStep = 0;
     updateDebugPanel();
 
-    await botMessage("Which service would you like to connect?");
+    // WhatsApp: OAuth requires web browser - show link to PWA
+    await botMessage(`🔗 ${bold('Connect Fitness App')}\n\nConnect your favorite fitness tracker to sync your activity automatically.\n\n${bold('Supported apps:')}\n• Garmin\n• Fitbit\n• Strava\n• Polar\n\nTap below to securely connect in your browser:\n\n<a href="${WEB_APP_URLS.CONNECT_APP}" target="_blank">🔗 Open Connection Portal</a>\n\n${italic('You\'ll return here once connected.')}`);
 
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: 'Garmin', action: 'connect_service', value: 'Garmin' },
-        { label: 'Fitbit', action: 'connect_service', value: 'Fitbit' },
-        { label: 'Strava', action: 'connect_service', value: 'Strava' },
-        { label: 'Polar', action: 'connect_service', value: 'Polar' },
-        { label: 'Other / Not sure', action: 'connect_other', type: 'secondary' }
+        { label: '🔗 Open portal', action: 'open_connect_portal', type: 'primary' },
+        { label: '📝 Log manually', action: 'menu_log' },
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
 async function handleConnectStep(action, value) {
-    if (action === 'connect_service') {
-        addMessage(value, true);
-        AppState.tempData.connectingService = value;
+    if (action === 'open_connect_portal') {
+        // Open the web portal for OAuth connection
+        window.open(WEB_APP_URLS.CONNECT_APP, '_blank');
 
-        await botMessage(`Perfect. We'll open a secure link to connect your account.\n\n<a href="#" onclick="simulateConnection('${value}'); return false;">🔗 Connect ${value}</a>`);
+        await botMessage(`🔗 Connection portal opened!\n\nComplete the connection in your browser, then return here.\n\n${italic('Once connected, your activity will sync automatically.')}`);
 
         setButtons([
+            { label: '✅ I\'m connected', action: 'confirm_connected', type: 'primary' },
+            { label: '📝 Log manually', action: 'menu_log' },
             { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
-    } else if (action === 'connect_other') {
-        await botMessage("No problem. You can also log activity manually for now.\n\nWe'll add more services soon!");
+    } else if (action === 'confirm_connected') {
+        // Simulate successful connection
+        AppState.user.connectedApps.push('Fitness App');
+        saveState();
+
+        await botMessage(`✅ ${bold('Connected!')}\n\nWe'll start syncing your activity data automatically.\n\nWhat would you like to do next?`);
+
         setButtons([
-            { label: 'Log manually', action: 'menu_log', type: 'primary' },
+            { label: '✅ Do check-in', action: 'menu_checkin', type: 'primary' },
+            { label: '📊 Health summary', action: 'menu_summary' },
             { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     }
@@ -1615,12 +1684,12 @@ async function showCoins() {
     AppState.currentFlow = FLOWS.COINS;
     updateDebugPanel();
 
-    await botMessage(`🪙 Your Strove Coins\n\nBalance: <strong>${AppState.coins}</strong> coins\n\nWhat would you like to do?`);
+    await botMessage(`🪙 ${bold('Your Strove Coins')}\n\nBalance: ${bold(String(AppState.coins))} coins\n\nWhat would you like to do?`);
 
+    // WhatsApp: max 3 buttons - combine options
     setButtons([
-        { label: 'Redeem rewards', action: 'redeem_rewards', type: 'primary' },
-        { label: 'How to earn more', action: 'earn_more' },
-        { label: 'Recent earnings', action: 'recent_earnings' },
+        { label: '🎁 Redeem rewards', action: 'redeem_rewards', type: 'primary' },
+        { label: '📈 Earn more', action: 'earn_more' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -1635,29 +1704,34 @@ async function showRecentEarnings() {
 }
 
 async function showEarnMore() {
-    await botMessage("You can earn coins by:\n\n• completing daily check-ins (10-15 coins)\n• logging activity (up to 30 coins)\n• completing challenges (bonus coins)\n• 🫀 Face scan health check (50 coins)\n\nWant to do one now?");
+    await botMessage(`📈 ${bold('How to Earn Coins')}\n\n• ✅ Daily check-ins: 10-15 coins\n• 🏃 Log activity: up to 30 coins\n• 🏆 Challenges: bonus coins\n• 🫀 Face scan: 50 coins\n\nWant to earn some now?`);
 
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
+        { label: '✅ Check-in', action: 'menu_checkin', type: 'primary' },
         { label: '🫀 Face scan', action: 'menu_facescan' },
-        { label: 'Log activity', action: 'menu_log' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
 async function showRedeemRewards() {
     if (AppState.coins < 100) {
-        await botMessage(`You don't have enough coins to redeem yet.\n\nYour balance is ${AppState.coins} coins.\nMost rewards start at 100 coins.\n\nWant a quick way to earn more?`);
+        await botMessage(`🎁 ${bold('Redeem Rewards')}\n\nYour balance: ${bold(String(AppState.coins))} coins\n\nYou need at least 100 coins to redeem.\n\nWant a quick way to earn more?`);
 
+        // WhatsApp: max 3 buttons
         setButtons([
-            { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
-            { label: 'Log activity', action: 'menu_log' },
+            { label: '✅ Check-in', action: 'menu_checkin', type: 'primary' },
+            { label: '🏃 Log activity', action: 'menu_log' },
             { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     } else {
-        await botMessage(`🎁 Popular rewards\n\n• Coffee voucher (100 coins)\n• Wellness item (200 coins)\n• Fitness gear (500 coins)\n\nRedeem securely here:\n<a href="#">🔗 Redeem rewards</a>`);
+        // WhatsApp: Secure redemption requires web - link to PWA
+        await botMessage(`🎁 ${bold('Redeem Rewards')}\n\nYour balance: ${bold(String(AppState.coins))} coins\n\n${bold('Popular rewards:')}\n• ☕ Coffee voucher (100 coins)\n• 💆 Wellness item (200 coins)\n• 🏋️ Fitness gear (500 coins)\n\nTap below to browse and redeem:\n\n<a href="${WEB_APP_URLS.REWARDS}" target="_blank">🎁 Open Rewards Store</a>`);
 
+        // WhatsApp: max 3 buttons
         setButtons([
+            { label: '🎁 Open store', action: 'open_rewards_store', type: 'primary' },
+            { label: '📈 Earn more', action: 'earn_more' },
             { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     }
@@ -1723,111 +1797,66 @@ async function startFaceScan() {
     AppState.tempData.faceScan = {};
     updateDebugPanel();
 
-    await botMessage("🫀 <strong>Health Check - Face Scan</strong>\n\nGet a personalized health report with estimated vitals using your camera.\n\nThis takes about 2 minutes and earns you <strong>50 coins</strong>.");
+    // WhatsApp: Face scan requires camera access - must use web app
+    await botMessage(`🫀 ${bold('Health Check - Face Scan')}\n\nGet a personalized health report with estimated vitals using your camera.\n\nThis takes about 2 minutes and earns you ${bold('50 coins')}.\n\n⚠️ ${bold('Disclaimer')}\nFace scan outputs are non-diagnostic estimates. Do not use for medical decisions. Seek professional advice for health concerns.`);
 
     await delay(500);
-    await botMessage("⚠️ <strong>Disclaimer</strong>\n\nFace scan outputs are non-diagnostic estimates, and the product is not a medical device.\n\nDo not use for screening, diagnosis, treatment, or emergency decision-making.\n\nSeek professional advice; for emergencies, call your local emergency number.");
+    await botMessage(`📱 ${bold('How it works:')}\n\n1. Tap the link below to open the scan\n2. Allow camera access when prompted\n3. Follow the on-screen instructions\n4. Results will appear here when complete\n\n<a href="${WEB_APP_URLS.FACE_SCAN}" target="_blank">🫀 Start Face Scan</a>`);
 
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: '✅ I understand, continue', action: 'facescan_start', type: 'primary' },
-        { label: 'Cancel', action: 'goto_menu', type: 'secondary' }
+        { label: '🫀 Open scan', action: 'open_facescan', type: 'primary' },
+        { label: '❓ How it works', action: 'facescan_info' },
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
 async function handleFaceScanStep(action, value) {
     switch (AppState.flowStep) {
-        case 0: // Disclaimer accepted
-            if (action === 'facescan_start') {
+        case 0: // Initial - open web scan or show info
+            if (action === 'open_facescan') {
+                window.open(WEB_APP_URLS.FACE_SCAN, '_blank');
                 AppState.flowStep = 1;
-                await botMessage("First, a few quick health questions.\n\n<strong>Do you smoke?</strong>");
+
+                await botMessage(`🫀 Face scan opened in browser!\n\nComplete the scan there, then return here.\n\n${italic('Tip: Keep this chat open - your results will appear here.')}`);
+
+                // WhatsApp: max 3 buttons
                 setButtons([
-                    { label: 'No, never', action: 'fs_smoker', value: 'never' },
-                    { label: 'Ex-smoker', action: 'fs_smoker', value: 'ex' },
-                    { label: 'Yes, occasionally', action: 'fs_smoker', value: 'occasional' },
-                    { label: 'Yes, daily', action: 'fs_smoker', value: 'daily' }
+                    { label: '✅ Scan complete', action: 'facescan_complete', type: 'primary' },
+                    { label: '🔄 Try again', action: 'open_facescan' },
+                    { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
+                ]);
+            } else if (action === 'facescan_info') {
+                await botMessage(`📱 ${bold('About Face Scan')}\n\nUsing advanced photoplethysmography (PPG), we analyze subtle color changes in your face to estimate:\n\n• ❤️ Heart rate\n• 🩺 Blood pressure\n• 🫁 Blood oxygen (SpO2)\n• 💨 Breathing rate\n\n${italic('The scan takes about 30 seconds and requires good lighting.')}`);
+
+                setButtons([
+                    { label: '🫀 Start scan', action: 'open_facescan', type: 'primary' },
+                    { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
                 ]);
             }
             break;
 
-        case 1: // Smoking status
-            addMessage(value === 'never' ? 'No, never' : value === 'ex' ? 'Ex-smoker' : value === 'occasional' ? 'Yes, occasionally' : 'Yes, daily', true);
-            AppState.tempData.faceScan.smoker = value;
-            AppState.flowStep = 2;
-            await botMessage("<strong>How would you describe your physical activity level?</strong>");
-            setButtons([
-                { label: 'Sedentary', action: 'fs_activity', value: 'sedentary' },
-                { label: 'Light (1-2 days/week)', action: 'fs_activity', value: 'light' },
-                { label: 'Moderate (3-4 days/week)', action: 'fs_activity', value: 'moderate' },
-                { label: 'Active (5+ days/week)', action: 'fs_activity', value: 'active' }
-            ]);
-            break;
+        case 1: // Waiting for scan completion
+            if (action === 'facescan_complete') {
+                // Simulate receiving results from PWA webhook
+                await botMessage("📊 Processing your scan results...");
+                await delay(1500);
 
-        case 2: // Activity level
-            addMessage(value === 'sedentary' ? 'Sedentary' : value === 'light' ? 'Light' : value === 'moderate' ? 'Moderate' : 'Active', true);
-            AppState.tempData.faceScan.activityLevel = value;
-            AppState.flowStep = 3;
-            await botMessage("<strong>Do you have any of the following conditions?</strong>\n\n(Select the most relevant)");
-            setButtons([
-                { label: 'None', action: 'fs_conditions', value: 'none' },
-                { label: 'High blood pressure', action: 'fs_conditions', value: 'hypertension' },
-                { label: 'Diabetes', action: 'fs_conditions', value: 'diabetes' },
-                { label: 'Heart condition', action: 'fs_conditions', value: 'heart' }
-            ]);
-            break;
+                // Generate simulated results
+                const results = generateFaceScanResults();
+                AppState.faceScanResults = results;
+                AppState.lastFaceScan = new Date().toISOString();
 
-        case 3: // Health conditions
-            addMessage(value === 'none' ? 'None' : value === 'hypertension' ? 'High blood pressure' : value === 'diabetes' ? 'Diabetes' : 'Heart condition', true);
-            AppState.tempData.faceScan.conditions = value;
-            AppState.flowStep = 4;
-            await botMessage("<strong>How much alcohol do you consume?</strong>");
-            setButtons([
-                { label: 'None', action: 'fs_alcohol', value: 'none' },
-                { label: 'Occasionally', action: 'fs_alcohol', value: 'occasional' },
-                { label: 'Moderate (few/week)', action: 'fs_alcohol', value: 'moderate' },
-                { label: 'Heavy (daily)', action: 'fs_alcohol', value: 'heavy' }
-            ]);
-            break;
+                // Award coins
+                const coinsEarned = 50;
+                AppState.coins += coinsEarned;
+                saveState();
 
-        case 4: // Alcohol consumption
-            addMessage(value === 'none' ? 'None' : value === 'occasional' ? 'Occasionally' : value === 'moderate' ? 'Moderate' : 'Heavy', true);
-            AppState.tempData.faceScan.alcohol = value;
-            AppState.flowStep = 5;
-
-            // Check if we have height/weight, if not ask
-            if (!AppState.user.height || !AppState.user.weight) {
-                await botMessage("We need your height and weight for accurate BMI calculation.\n\n<strong>What's your height in cm?</strong>\n\nExample: 175");
-                clearButtons();
-            } else {
-                AppState.flowStep = 7;
-                showFaceScanCamera();
-            }
-            break;
-
-        case 5: // Height input
-            const height = parseInt(value);
-            if (isNaN(height) || height < 100 || height > 250) {
-                await botMessage("Please enter a valid height in cm (e.g., 175)");
-            } else {
-                AppState.user.height = height;
-                AppState.flowStep = 6;
-                await botMessage("<strong>What's your weight in kg?</strong>\n\nExample: 82");
-            }
-            break;
-
-        case 6: // Weight input
-            const weight = parseInt(value);
-            if (isNaN(weight) || weight < 30 || weight > 300) {
-                await botMessage("Please enter a valid weight in kg (e.g., 82)");
-            } else {
-                AppState.user.weight = weight;
-                AppState.flowStep = 7;
-                showFaceScanCamera();
-            }
-            break;
-
-        case 7: // Camera permission / scan
-            if (action === 'fs_start_scan') {
-                performFaceScan();
+                // Show results
+                showFaceScanResults(results, coinsEarned);
+            } else if (action === 'open_facescan') {
+                window.open(WEB_APP_URLS.FACE_SCAN, '_blank');
+                await botMessage(`🔄 Reopened face scan in browser.`);
             }
             break;
     }
@@ -1877,9 +1906,10 @@ async function performFaceScan() {
 }
 
 function generateFaceScanResults() {
-    const data = AppState.tempData.faceScan;
-    const height = AppState.user.height / 100; // convert to meters
-    const weight = AppState.user.weight;
+    const data = AppState.tempData.faceScan || {};
+    // Use default values if height/weight not set (since we skip questionnaire in WhatsApp flow)
+    const height = (AppState.user.height || 170) / 100; // convert to meters
+    const weight = AppState.user.weight || 75;
     const bmi = weight / (height * height);
 
     // Base values with some randomization
@@ -1986,74 +2016,28 @@ function generateFaceScanResults() {
 }
 
 async function showFaceScanResults(results, coinsEarned) {
+    // WhatsApp compatible: plain text health report (no HTML/CSS)
+    const statusEmoji = results.overallStatus === 'Excellent' ? '🌟' :
+                        results.overallStatus === 'Good' ? '✅' :
+                        results.overallStatus === 'Fair' ? '⚠️' : '❗';
+
+    const healthBar = textProgressBar(results.cmsScore, 100, 10);
+
     // Health Snapshot
-    await botMessage(`🫀 <strong>Personalised Health Report</strong>\n\n<div class="health-report-card">
-<div class="health-snapshot">
-<strong>Health Snapshot</strong> — Overall: <span class="${results.overallStatus === 'Good' || results.overallStatus === 'Excellent' ? 'status-good' : 'status-warning'}">${results.overallStatus}</span>
-
-<div class="cms-score-display">
-<div class="cms-circle" style="--cms-progress: ${results.cmsScore}%">
-<div class="cms-inner">${results.cmsScore}</div>
-</div>
-<span class="cms-label">${results.cmsScore} / 100</span>
-</div>
-
-${results.bpWarning || results.bmiWarning ?
+    await botMessage(`🫀 ${bold('Personalised Health Report')}\n\n${bold('Health Snapshot')}\nOverall: ${statusEmoji} ${results.overallStatus}\n\n${bold('Heart Health Score')}\n${healthBar}\n${results.cmsScore} / 100\n\n${results.bpWarning || results.bmiWarning ?
 'Good overall heart health with a couple of areas to monitor.' :
-'Great heart health! Keep up the healthy habits!'}
-</div>
-</div>
-
-📅 Assessment: ${results.timestamp} (SAST)`);
+'Great heart health! Keep up the healthy habits!'}\n\n📅 ${results.timestamp} (SAST)`);
 
     await delay(800);
 
-    // Detailed Results
-    await botMessage(`📊 <strong>Your Results</strong>
+    // WhatsApp compatible: plain text detailed results
+    const hrStatus = results.heartRate <= 100 ? '✅ Normal' : '⚠️ Elevated';
+    const bpStatus = results.bpWarning ? `⚠️ ${results.bpStatus}` : `✅ ${results.bpStatus}`;
+    const bmiDisplayStatus = results.bmiWarning ? `⚠️ ${results.bmiStatus}` : `✅ ${results.bmiStatus}`;
+    const cmsStatus = results.cmsScore >= 70 ? '✅ Good' : '⚠️ Room to improve';
+    const riskStatus = parseFloat(results.cvdRisk) < 5 ? '✅ Low' : '⚠️ Moderate';
 
-<div class="results-table">
-<div class="result-row">
-<span class="metric">Heart Health Score</span>
-<span class="value">${results.cmsScore}</span>
-<span class="interpretation ${results.cmsScore >= 70 ? 'good' : 'warning'}">${results.cmsScore >= 70 ? 'Good' : 'Room to improve'}</span>
-</div>
-
-<div class="result-row">
-<span class="metric">10-Year Heart Risk</span>
-<span class="value">${results.cvdRisk}%</span>
-<span class="interpretation ${parseFloat(results.cvdRisk) < 5 ? 'good' : 'warning'}">${parseFloat(results.cvdRisk) < 5 ? 'Low' : 'Moderate'}</span>
-</div>
-
-<div class="result-row">
-<span class="metric">Resting Heart Rate</span>
-<span class="value">${results.heartRate} bpm</span>
-<span class="interpretation ${results.heartRate <= 100 ? 'good' : 'warning'}">${results.heartRate <= 100 ? 'Normal' : 'Elevated'}</span>
-</div>
-
-<div class="result-row ${results.bpWarning ? 'warning-row' : ''}">
-<span class="metric">Blood Pressure</span>
-<span class="value">${results.systolic}/${results.diastolic} mmHg</span>
-<span class="interpretation ${results.bpWarning ? 'warning' : 'good'}">${results.bpWarning ? '⚠️ ' : ''}${results.bpStatus}</span>
-</div>
-
-<div class="result-row ${results.bmiWarning ? 'warning-row' : ''}">
-<span class="metric">BMI</span>
-<span class="value">${results.bmi} kg/m²</span>
-<span class="interpretation ${results.bmiWarning ? 'warning' : 'good'}">${results.bmiWarning ? '⚠️ ' : ''}${results.bmiStatus}</span>
-</div>
-
-<div class="result-row">
-<span class="metric">Breathing Rate</span>
-<span class="value">${results.respRate} breaths/min</span>
-<span class="interpretation good">Normal</span>
-</div>
-
-<div class="result-row">
-<span class="metric">Blood Oxygen</span>
-<span class="value">${results.spo2}%</span>
-<span class="interpretation good">Normal</span>
-</div>
-</div>`);
+    await botMessage(`📊 ${bold('Your Results')}\n\n❤️ ${bold('Heart Health Score')}\n   ${results.cmsScore} — ${cmsStatus}\n\n📈 ${bold('10-Year Heart Risk')}\n   ${results.cvdRisk}% — ${riskStatus}\n\n💓 ${bold('Resting Heart Rate')}\n   ${results.heartRate} bpm — ${hrStatus}\n\n🩺 ${bold('Blood Pressure')}\n   ${results.systolic}/${results.diastolic} mmHg — ${bpStatus}\n\n⚖️ ${bold('BMI')}\n   ${results.bmi} kg/m² — ${bmiDisplayStatus}\n\n💨 ${bold('Breathing Rate')}\n   ${results.respRate} breaths/min — ✅ Normal\n\n🫁 ${bold('Blood Oxygen')}\n   ${results.spo2}% — ✅ Normal`);
 
     await delay(800);
 
@@ -2069,7 +2053,8 @@ ${results.bpWarning || results.bmiWarning ?
     }
     meaningPoints.push(`Heart rate and oxygen levels are within normal ranges.`);
 
-    await botMessage(`💡 <strong>What This Means</strong>\n\n${meaningPoints.map(p => '• ' + p).join('\n')}`);
+    // WhatsApp compatible: plain text
+    await botMessage(`💡 ${bold('What This Means')}\n\n${meaningPoints.map(p => '• ' + p).join('\n')}`);
 
     await delay(800);
 
@@ -2082,23 +2067,27 @@ ${results.bpWarning || results.bmiWarning ?
     if (results.bmiWarning && results.bmi >= 25) {
         recommendations.push('🥗 Use the AI meal scanner to track meals and choose lower-salt, higher-fibre options.');
     }
-    if (AppState.tempData.faceScan.activityLevel === 'sedentary' || AppState.tempData.faceScan.activityLevel === 'light') {
+    // Check activity level if available
+    const activityLevel = AppState.tempData.faceScan?.activityLevel;
+    if (activityLevel === 'sedentary' || activityLevel === 'light') {
         recommendations.push('🏃 Aim to earn 200 Strove points this week to meet the WHO 150-minute guideline.');
     }
     recommendations.push('😴 Track sleep and aim for at least 7 hours per night.');
     recommendations.push('🔄 Repeat the face scan in 2 weeks to track trends.');
 
-    await botMessage(`✅ <strong>Recommendations</strong>\n\n<strong>Lifestyle Actions:</strong>\n${recommendations.slice(0, -1).map(r => '• ' + r).join('\n')}\n\n<strong>Next Steps:</strong>\n• ${recommendations[recommendations.length - 1]}`);
+    // WhatsApp compatible: plain text
+    await botMessage(`✅ ${bold('Recommendations')}\n\n${bold('Lifestyle Actions:')}\n${recommendations.slice(0, -1).map(r => '• ' + r).join('\n')}\n\n${bold('Next Steps:')}\n• ${recommendations[recommendations.length - 1]}`);
 
     // Coins earned
     await delay(500);
-    await botMessage(`🎉 <strong>Health check complete!</strong>\n\nYou earned <span class="coin-earned">🪙 ${coinsEarned}</span> coins.\n\nTrack your progress by doing another scan in 2 weeks.`);
+    await botMessage(`🎉 ${bold('Health check complete!')}\n\nYou earned 🪙 ${bold(String(coinsEarned))} coins.\n\nTrack your progress by doing another scan in 2 weeks.`);
 
     AppState.tempData = {};
 
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: 'View Health Summary', action: 'menu_summary', type: 'primary' },
-        { label: 'Log Activity', action: 'menu_log' },
+        { label: '📊 Health Summary', action: 'menu_summary', type: 'primary' },
+        { label: '🏃 Log Activity', action: 'menu_log' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
@@ -2115,13 +2104,13 @@ async function startAIChat() {
     updateDebugPanel();
 
     const greeting = getPersonalizedGreeting();
-    await botMessage(`🤖 <strong>Strove AI Assistant</strong>\n\n${greeting}\n\nI can help you with:\n• Understanding your health data\n• Personalized wellness tips\n• Answering questions about your progress\n• Motivation and goal setting\n\nJust type your question or pick a topic below.`);
+    // WhatsApp compatible: plain text
+    await botMessage(`🤖 ${bold('Strove AI Assistant')}\n\n${greeting}\n\nI can help you with:\n• Understanding your health data\n• Personalized wellness tips\n• Answering questions about your progress\n• Motivation and goal setting\n\n${italic('Just type your question or pick a topic below.')}`);
 
+    // WhatsApp: max 3 buttons
     setButtons([
         { label: '📊 Analyze my week', action: 'ai_analyze_week', type: 'primary' },
-        { label: '🍽 Nutrition tips', action: 'ai_nutrition' },
-        { label: '😴 Sleep insights', action: 'ai_sleep' },
-        { label: '💪 Motivation', action: 'ai_motivation' },
+        { label: '💪 Tips & motivation', action: 'ai_motivation' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -2427,7 +2416,8 @@ async function showContentLibrary() {
     AppState.flowStep = 0;
     updateDebugPanel();
 
-    await botMessage("📚 <strong>Content Library</strong>\n\nExplore workouts, recipes, and wellness content.\n\nLoading content...");
+    // WhatsApp compatible: plain text
+    await botMessage(`📚 ${bold('Content Library')}\n\nExplore workouts, recipes, and wellness content.\n\n${italic('Loading content...')}`);
     clearButtons();
 
     const content = await fetchContentLibrary();
@@ -2435,25 +2425,23 @@ async function showContentLibrary() {
     if (content.length === 0) {
         await botMessage("Unable to load content right now. Please try again later.");
         setButtons([
-            { label: 'Try again', action: 'menu_content', type: 'primary' },
+            { label: '🔄 Try again', action: 'menu_content', type: 'primary' },
             { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
 
-    // Show categories
-    await botMessage(`Found <strong>${content.length}</strong> items across ${contentCategories.length} categories.\n\nBrowse by category or see featured content:`);
+    // WhatsApp: max 10 list items, max 3 buttons - show categories in message
+    const categoryList = contentCategories.slice(0, 6).map(cat =>
+        `${getCategoryEmoji(cat.slug)} ${cat.name}`
+    ).join('\n');
 
-    const categoryButtons = contentCategories.slice(0, 4).map(cat => ({
-        label: getCategoryEmoji(cat.slug) + ' ' + cat.name,
-        action: 'content_category',
-        value: cat.slug
-    }));
+    await botMessage(`Found ${bold(String(content.length))} items\n\n${bold('Categories:')}\n${categoryList}\n\n${italic('Choose below or type a category name:')}`);
 
+    // WhatsApp: max 3 buttons
     setButtons([
         { label: '⭐ Featured', action: 'content_featured', type: 'primary' },
-        ...categoryButtons,
-        { label: '🔍 Search', action: 'content_search' },
+        { label: '📂 Browse all', action: 'content_browse' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -2505,32 +2493,27 @@ async function showContentList(items, title) {
     // Store items for quick selection by number
     AppState.tempData.contentItems = items;
 
-    let contentHtml = `<strong>${title}</strong>\n\nTap a number to open:\n\n`;
+    // WhatsApp carousel style: Show items as a numbered list (max 10 for WhatsApp List Messages)
+    const maxItems = Math.min(items.length, WHATSAPP_LIMITS.MAX_LIST_ITEMS);
 
-    items.slice(0, 8).forEach((item, index) => {
+    let contentText = `${bold(title)}\n\n`;
+
+    items.slice(0, maxItems).forEach((item, index) => {
         const typeIcon = getContentTypeIcon(item.type);
-        const duration = item.duration?.label ? `(${item.duration.label})` : '';
-        const points = item.points?.value ? `🪙 ${item.points.value}` : '';
+        const duration = item.duration?.label ? ` (${item.duration.label})` : '';
+        const points = item.points?.value ? ` 🪙${item.points.value}` : '';
 
-        contentHtml += `<div class="content-list-item">
-<strong>${index + 1}.</strong> ${typeIcon} ${item.title} ${duration} ${points}
-</div>`;
+        contentText += `${bold(String(index + 1))}. ${typeIcon} ${item.title}${duration}${points}\n`;
     });
 
-    contentHtml += `\n<em>Type a number (1-${Math.min(items.length, 8)}) to open</em>`;
+    contentText += `\n${italic('Reply with a number (1-' + maxItems + ') to open')}`;
 
-    await botMessage(contentHtml);
+    await botMessage(contentText);
 
-    // Create numbered buttons for quick selection
-    const itemButtons = items.slice(0, 6).map((item, index) => ({
-        label: `${index + 1}. ${getContentTypeIcon(item.type)} ${item.title.substring(0, 15)}${item.title.length > 15 ? '...' : ''}`,
-        action: 'content_open',
-        value: item.documentId
-    }));
-
+    // WhatsApp: max 3 buttons - show navigation only
     setButtons([
-        ...itemButtons,
-        { label: '← Back', action: 'menu_content' },
+        { label: '🔄 More content', action: 'content_more' },
+        { label: '📂 Categories', action: 'menu_content' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
@@ -2851,9 +2834,42 @@ function handleContentAction(action, value) {
         case 'content_search':
             handleContentSearch();
             break;
+        case 'content_browse':
+            showAllCategories();
+            break;
+        case 'content_more':
+            showMoreContent();
+            break;
         default:
             showContentLibrary();
     }
+}
+
+// WhatsApp compatible: show all categories in list format
+async function showAllCategories() {
+    const categoryList = contentCategories.map((cat, index) =>
+        `${bold(String(index + 1))}. ${getCategoryEmoji(cat.slug)} ${cat.name}`
+    ).join('\n');
+
+    await botMessage(`📂 ${bold('Browse Categories')}\n\n${categoryList}\n\n${italic('Reply with a number to browse that category')}`);
+
+    // Store categories for number selection
+    AppState.tempData.browseCategories = contentCategories;
+    AppState.flowStep = 3; // Category selection mode
+
+    setButtons([
+        { label: '⭐ Featured', action: 'content_featured', type: 'primary' },
+        { label: '🔍 Search', action: 'content_search' },
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+// Show more content from the current category
+async function showMoreContent() {
+    const content = await fetchContentLibrary();
+    // Get random selection
+    const shuffled = content.sort(() => 0.5 - Math.random());
+    await showContentList(shuffled.slice(0, 10), '📚 More Content');
 }
 
 // ==========================================
@@ -2865,15 +2881,13 @@ async function showSettings() {
     AppState.flowStep = 0;
     updateDebugPanel();
 
-    await botMessage("⚙️ Settings\n\nWhat would you like to change?");
+    // WhatsApp: Show settings as list, use max 3 buttons
+    await botMessage(`⚙️ ${bold('Settings')}\n\nWhat would you like to change?\n\n1. 🔔 Reminder preferences\n2. 🎯 Goals\n3. 👤 Profile\n4. 🔗 Connected apps\n5. 🌐 Language\n6. 🛑 Stop messages\n\n${italic('Reply with a number or choose below:')}`);
 
+    // WhatsApp: max 3 buttons - most common options
     setButtons([
-        { label: 'Reminder preferences', action: 'settings_reminders' },
-        { label: 'Goals', action: 'settings_goals' },
-        { label: 'Profile', action: 'settings_profile' },
-        { label: 'Connected apps', action: 'settings_apps' },
-        { label: 'Language', action: 'settings_language' },
-        { label: 'Stop messages', action: 'settings_stop', type: 'secondary' },
+        { label: '🌐 Language', action: 'settings_language', type: 'primary' },
+        { label: '🔔 Reminders', action: 'settings_reminders' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -2987,12 +3001,13 @@ async function startHelpFlow() {
     AppState.currentFlow = FLOWS.HELP;
     updateDebugPanel();
 
-    await botMessage("❓ How can we help?");
+    // WhatsApp compatible: plain text
+    await botMessage(`❓ ${bold('How can we help?')}\n\nChoose a topic below:`);
 
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: 'How to use Strove Lite', action: 'help_usage' },
-        { label: 'Contact support', action: 'help_support' },
-        { label: 'Privacy & data', action: 'help_privacy' },
+        { label: '📖 How to use', action: 'help_usage', type: 'primary' },
+        { label: '💬 Contact support', action: 'help_support' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -3007,12 +3022,12 @@ async function handleHelpStep(action, value) {
             break;
 
         case 'help_support':
-            await botMessage("If something isn't working, we can help.\n\nChoose an option:");
+            // WhatsApp: max 3 buttons
+            await botMessage(`💬 ${bold('Contact Support')}\n\nIf something isn't working, we can help.\n\nChoose the type of issue:`);
             setButtons([
-                { label: 'Technical issue', action: 'support_type', value: 'Technical' },
-                { label: 'Rewards issue', action: 'support_type', value: 'Rewards' },
-                { label: 'Account issue', action: 'support_type', value: 'Account' },
-                { label: 'Back', action: 'menu_help', type: 'secondary' }
+                { label: '🔧 Technical', action: 'support_type', value: 'Technical' },
+                { label: '🎁 Rewards/Account', action: 'support_type', value: 'Rewards/Account' },
+                { label: '← Back', action: 'menu_help', type: 'secondary' }
             ]);
             break;
 
@@ -3107,6 +3122,10 @@ function handleButtonClick(action, value) {
             if (action === 'redeem_rewards') showRedeemRewards();
             else if (action === 'earn_more') showEarnMore();
             else if (action === 'recent_earnings') showRecentEarnings();
+            else if (action === 'open_rewards_store') {
+                window.open(WEB_APP_URLS.REWARDS, '_blank');
+                botMessage(`🎁 Rewards store opened!\n\n${italic('Browse and redeem in your browser.')}`);
+            }
             break;
         case FLOWS.SETTINGS:
             handleSettingsStep(action, value);
