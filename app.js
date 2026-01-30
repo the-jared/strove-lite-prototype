@@ -222,6 +222,19 @@ const translations = {
         content_like: '❤️ Like',
         content_more: '📚 More Content',
 
+        // Onboarding
+        onboard_link_account: "Let's link you to your Strove account.\n\nPlease enter your email or member ID.",
+        onboard_code_sent: "Thanks — we're securing your account.\n\nWe've sent a 6-digit code to your email.\nPlease enter it here.",
+        onboard_verified: "✅ Verified.\n\nWhat's your first name?",
+        onboard_surname: "Thanks, {name}. What's your surname?",
+        onboard_account_created: "✅ Account created!\n\nLet's get started, {name}.",
+        onboard_first_action: "Do your first check-in or connect a fitness app to pull your steps and workouts automatically.",
+        onboard_first_checkin: '✅ Do first check-in',
+        onboard_connect_app: '🔗 Connect fitness app',
+        onboard_skip: 'Skip for now',
+        onboard_code_resent: "Done — we've sent a new code. Please enter it here.",
+        onboard_code_error: "Hmm, that code didn't match. Double-check your email and try again, or type RESEND.",
+
         // Misc
         coins_label: '🪙 {count} coins',
         loading: 'Loading...',
@@ -319,6 +332,19 @@ const translations = {
         content_like: '❤️ Thanda',
         content_more: '📚 Okuningi',
 
+        // Onboarding
+        onboard_link_account: "Ake sixhume i-akhawunti yakho ye-Strove.\n\nSicela ufake i-imeyili yakho noma i-ID yobulunga.",
+        onboard_code_sent: "Siyabonga — siqinisekisa i-akhawunti yakho.\n\nSithumele ikhodi yezinombolo ezingu-6 ku-imeyili yakho.\nSicela ufake lapha.",
+        onboard_verified: "✅ Kuqinisekisiwe.\n\nUbani igama lakho?",
+        onboard_surname: "Siyabonga, {name}. Isibongo sakho sithini?",
+        onboard_account_created: "✅ I-akhawunti idalwe!\n\nAke siqale, {name}.",
+        onboard_first_action: "Yenza ukubhalisela kwakho kokuqala noma uxhume uhlelo lokuzivocavoca ukuze uthole izinyathelo zakho nemisebenzi ngokuzenzakalelayo.",
+        onboard_first_checkin: '✅ Yenza ukubhalisela kokuqala',
+        onboard_connect_app: '🔗 Xhuma uhlelo',
+        onboard_skip: 'Yeqa okwamanje',
+        onboard_code_resent: "Kwenziwe — sithumele ikhodi entsha. Sicela ufake lapha.",
+        onboard_code_error: "Hmm, leyo khodi ayihambisani. Hlola i-imeyili yakho futhi uzame futhi, noma thayipha RESEND.",
+
         // Misc
         coins_label: '🪙 izinhlamvu ezingu-{count}',
         loading: 'Iyalayisha...',
@@ -415,6 +441,19 @@ const translations = {
         content_complete: '✅ Merk Voltooi',
         content_like: '❤️ Hou van',
         content_more: '📚 Meer Inhoud',
+
+        // Onboarding
+        onboard_link_account: "Kom ons koppel jou aan jou Strove-rekening.\n\nVoer asseblief jou e-pos of lid-ID in.",
+        onboard_code_sent: "Dankie — ons beveilig jou rekening.\n\nOns het 'n 6-syfer kode na jou e-pos gestuur.\nVoer dit asseblief hier in.",
+        onboard_verified: "✅ Geverifieer.\n\nWat is jou voornaam?",
+        onboard_surname: "Dankie, {name}. Wat is jou van?",
+        onboard_account_created: "✅ Rekening geskep!\n\nKom ons begin, {name}.",
+        onboard_first_action: "Doen jou eerste inklok of koppel 'n fiksheid-app om jou stappe en oefeninge outomaties te trek.",
+        onboard_first_checkin: '✅ Doen eerste inklok',
+        onboard_connect_app: '🔗 Koppel fiksheid-app',
+        onboard_skip: 'Slaan vir eers oor',
+        onboard_code_resent: "Klaar — ons het 'n nuwe kode gestuur. Voer dit asseblief hier in.",
+        onboard_code_error: "Hmm, daardie kode pas nie. Kyk weer na jou e-pos en probeer weer, of tik RESEND.",
 
         // Misc
         coins_label: '🪙 {count} munte',
@@ -687,7 +726,7 @@ async function handleOnboardingStep(action, value) {
                 addMessage(value, true);
                 AppState.user.language = value;
                 AppState.flowStep = 2;
-                await botMessage("Let's link you to your Strove account.\n\nPlease enter your email or member ID.");
+                await botMessage(t('onboard_link_account'));
                 clearButtons();
             }
             break;
@@ -695,25 +734,25 @@ async function handleOnboardingStep(action, value) {
         case 2: // Email/ID input
             AppState.user.email = value;
             AppState.flowStep = 3;
-            await botMessage("Thanks — we're securing your account.\n\nWe've sent a 6-digit code to your email.\nPlease enter it here.");
+            await botMessage(t('onboard_code_sent'));
             clearButtons();
             break;
 
         case 3: // Verification code
             if (/^\d{6}$/.test(value)) {
                 AppState.flowStep = 4;
-                await botMessage("✅ Verified.\n\nWhat's your first name?");
+                await botMessage(t('onboard_verified'));
             } else if (value.toUpperCase() === 'RESEND') {
-                await botMessage("Done — we've sent a new code. Please enter it here.");
+                await botMessage(t('onboard_code_resent'));
             } else {
-                await botMessage("Hmm, that code didn't match. Double-check your email and try again, or type RESEND.");
+                await botMessage(t('onboard_code_error'));
             }
             break;
 
         case 4: // First name
             AppState.user.firstName = value;
             AppState.flowStep = 5;
-            await botMessage(`Thanks, ${value}. What's your surname?`);
+            await botMessage(t('onboard_surname', { name: value }));
             break;
 
         case 5: // Surname - End of lean onboarding
@@ -721,14 +760,14 @@ async function handleOnboardingStep(action, value) {
             AppState.user.registered = true;
             AppState.flowStep = 6;
 
-            await botMessage(`✅ Account created!\n\nLet's get started, ${AppState.user.firstName}.`);
+            await botMessage(t('onboard_account_created', { name: AppState.user.firstName }));
             await delay(500);
-            await botMessage("Do your first check-in or connect a fitness app to pull your steps and workouts automatically.");
+            await botMessage(t('onboard_first_action'));
 
             setButtons([
-                { label: '✅ Do first check-in', action: 'first_checkin', type: 'primary' },
-                { label: '🔗 Connect fitness app', action: 'first_connect' },
-                { label: 'Skip for now', action: 'skip_first', type: 'secondary' }
+                { label: t('onboard_first_checkin'), action: 'first_checkin', type: 'primary' },
+                { label: t('onboard_connect_app'), action: 'first_connect' },
+                { label: t('onboard_skip'), action: 'skip_first', type: 'secondary' }
             ]);
             saveState();
             break;
