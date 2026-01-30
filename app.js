@@ -48,7 +48,11 @@ const AppState = {
 
     // Settings
     reminderFrequency: 'daily',
-    challengeReminders: 'weekly'
+    challengeReminders: 'weekly',
+
+    // Face scan data
+    lastFaceScan: null,
+    faceScanResults: null
 };
 
 // Flow definitions
@@ -66,7 +70,8 @@ const FLOWS = {
     MEAL_SCAN: 'mealScan',
     SETTINGS: 'settings',
     HELP: 'help',
-    EXTENDED_PROFILE: 'extendedProfile'
+    EXTENDED_PROFILE: 'extendedProfile',
+    FACE_SCAN: 'faceScan'
 };
 
 // ==========================================
@@ -480,6 +485,7 @@ async function showMainMenu() {
     setButtons([
         { label: '✅ Check-in', action: 'menu_checkin', type: 'primary' },
         { label: '📊 Health summary', action: 'menu_summary' },
+        { label: '🫀 Face scan', action: 'menu_facescan' },
         { label: '🏆 Challenges', action: 'menu_challenges' },
         { label: '⭐ My Score', action: 'menu_score' },
         { label: '🏃 Log activity', action: 'menu_log' },
@@ -1044,12 +1050,12 @@ async function showRecentEarnings() {
 }
 
 async function showEarnMore() {
-    await botMessage("You can earn coins by:\n\n• completing daily check-ins (10-15 coins)\n• logging activity (up to 30 coins)\n• completing challenges (bonus coins)\n\nWant to do one now?");
+    await botMessage("You can earn coins by:\n\n• completing daily check-ins (10-15 coins)\n• logging activity (up to 30 coins)\n• completing challenges (bonus coins)\n• 🫀 Face scan health check (50 coins)\n\nWant to do one now?");
 
     setButtons([
         { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
+        { label: '🫀 Face scan', action: 'menu_facescan' },
         { label: 'Log activity', action: 'menu_log' },
-        { label: 'Challenges', action: 'menu_challenges' },
         { label: 'MENU', action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -1126,6 +1132,398 @@ async function handleMealScan(input) {
             { label: 'MENU', action: 'goto_menu', type: 'secondary' }
         ]);
     }
+}
+
+// ==========================================
+// FACE SCAN HEALTH CHECK
+// ==========================================
+
+async function startFaceScan() {
+    AppState.currentFlow = FLOWS.FACE_SCAN;
+    AppState.flowStep = 0;
+    AppState.tempData.faceScan = {};
+    updateDebugPanel();
+
+    await botMessage("🫀 <strong>Health Check - Face Scan</strong>\n\nGet a personalized health report with estimated vitals using your camera.\n\nThis takes about 2 minutes and earns you <strong>50 coins</strong>.");
+
+    await delay(500);
+    await botMessage("⚠️ <strong>Disclaimer</strong>\n\nFace scan outputs are non-diagnostic estimates, and the product is not a medical device.\n\nDo not use for screening, diagnosis, treatment, or emergency decision-making.\n\nSeek professional advice; for emergencies, call your local emergency number.");
+
+    setButtons([
+        { label: '✅ I understand, continue', action: 'facescan_start', type: 'primary' },
+        { label: 'Cancel', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+async function handleFaceScanStep(action, value) {
+    switch (AppState.flowStep) {
+        case 0: // Disclaimer accepted
+            if (action === 'facescan_start') {
+                AppState.flowStep = 1;
+                await botMessage("First, a few quick health questions.\n\n<strong>Do you smoke?</strong>");
+                setButtons([
+                    { label: 'No, never', action: 'fs_smoker', value: 'never' },
+                    { label: 'Ex-smoker', action: 'fs_smoker', value: 'ex' },
+                    { label: 'Yes, occasionally', action: 'fs_smoker', value: 'occasional' },
+                    { label: 'Yes, daily', action: 'fs_smoker', value: 'daily' }
+                ]);
+            }
+            break;
+
+        case 1: // Smoking status
+            addMessage(value === 'never' ? 'No, never' : value === 'ex' ? 'Ex-smoker' : value === 'occasional' ? 'Yes, occasionally' : 'Yes, daily', true);
+            AppState.tempData.faceScan.smoker = value;
+            AppState.flowStep = 2;
+            await botMessage("<strong>How would you describe your physical activity level?</strong>");
+            setButtons([
+                { label: 'Sedentary', action: 'fs_activity', value: 'sedentary' },
+                { label: 'Light (1-2 days/week)', action: 'fs_activity', value: 'light' },
+                { label: 'Moderate (3-4 days/week)', action: 'fs_activity', value: 'moderate' },
+                { label: 'Active (5+ days/week)', action: 'fs_activity', value: 'active' }
+            ]);
+            break;
+
+        case 2: // Activity level
+            addMessage(value === 'sedentary' ? 'Sedentary' : value === 'light' ? 'Light' : value === 'moderate' ? 'Moderate' : 'Active', true);
+            AppState.tempData.faceScan.activityLevel = value;
+            AppState.flowStep = 3;
+            await botMessage("<strong>Do you have any of the following conditions?</strong>\n\n(Select the most relevant)");
+            setButtons([
+                { label: 'None', action: 'fs_conditions', value: 'none' },
+                { label: 'High blood pressure', action: 'fs_conditions', value: 'hypertension' },
+                { label: 'Diabetes', action: 'fs_conditions', value: 'diabetes' },
+                { label: 'Heart condition', action: 'fs_conditions', value: 'heart' }
+            ]);
+            break;
+
+        case 3: // Health conditions
+            addMessage(value === 'none' ? 'None' : value === 'hypertension' ? 'High blood pressure' : value === 'diabetes' ? 'Diabetes' : 'Heart condition', true);
+            AppState.tempData.faceScan.conditions = value;
+            AppState.flowStep = 4;
+            await botMessage("<strong>How much alcohol do you consume?</strong>");
+            setButtons([
+                { label: 'None', action: 'fs_alcohol', value: 'none' },
+                { label: 'Occasionally', action: 'fs_alcohol', value: 'occasional' },
+                { label: 'Moderate (few/week)', action: 'fs_alcohol', value: 'moderate' },
+                { label: 'Heavy (daily)', action: 'fs_alcohol', value: 'heavy' }
+            ]);
+            break;
+
+        case 4: // Alcohol consumption
+            addMessage(value === 'none' ? 'None' : value === 'occasional' ? 'Occasionally' : value === 'moderate' ? 'Moderate' : 'Heavy', true);
+            AppState.tempData.faceScan.alcohol = value;
+            AppState.flowStep = 5;
+
+            // Check if we have height/weight, if not ask
+            if (!AppState.user.height || !AppState.user.weight) {
+                await botMessage("We need your height and weight for accurate BMI calculation.\n\n<strong>What's your height in cm?</strong>\n\nExample: 175");
+                clearButtons();
+            } else {
+                AppState.flowStep = 7;
+                showFaceScanCamera();
+            }
+            break;
+
+        case 5: // Height input
+            const height = parseInt(value);
+            if (isNaN(height) || height < 100 || height > 250) {
+                await botMessage("Please enter a valid height in cm (e.g., 175)");
+            } else {
+                AppState.user.height = height;
+                AppState.flowStep = 6;
+                await botMessage("<strong>What's your weight in kg?</strong>\n\nExample: 82");
+            }
+            break;
+
+        case 6: // Weight input
+            const weight = parseInt(value);
+            if (isNaN(weight) || weight < 30 || weight > 300) {
+                await botMessage("Please enter a valid weight in kg (e.g., 82)");
+            } else {
+                AppState.user.weight = weight;
+                AppState.flowStep = 7;
+                showFaceScanCamera();
+            }
+            break;
+
+        case 7: // Camera permission / scan
+            if (action === 'fs_start_scan') {
+                performFaceScan();
+            }
+            break;
+    }
+    updateDebugPanel();
+}
+
+async function showFaceScanCamera() {
+    await botMessage("✅ Questions complete!\n\nNow for the face scan.\n\n<strong>Instructions:</strong>\n• Find good lighting (natural light is best)\n• Face the camera directly\n• Keep still for 30 seconds\n• Remove glasses if possible");
+
+    await delay(500);
+    await botMessage("📷 <strong>Ready to scan?</strong>\n\nWe'll use your camera to measure:\n• Heart rate\n• Blood pressure (estimate)\n• Oxygen saturation\n• Respiratory rate\n\n<em>For demo: Click 'Start Scan' to simulate</em>");
+
+    setButtons([
+        { label: '📷 Start Scan', action: 'fs_start_scan', type: 'primary' },
+        { label: 'Cancel', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+async function performFaceScan() {
+    await botMessage("📷 <strong>Scanning...</strong>\n\nPlease hold still and look at the camera.");
+    clearButtons();
+
+    // Simulate scanning progress
+    await delay(1500);
+    await botMessage("Detecting face... ✅");
+    await delay(1500);
+    await botMessage("Measuring heart rate... ✅");
+    await delay(1500);
+    await botMessage("Analyzing blood flow... ✅");
+    await delay(1500);
+    await botMessage("Calculating vitals... ✅");
+    await delay(1000);
+
+    // Generate simulated results based on inputs
+    const results = generateFaceScanResults();
+    AppState.faceScanResults = results;
+    AppState.lastFaceScan = new Date().toISOString();
+
+    // Award coins
+    const coinsEarned = 50;
+    AppState.coins += coinsEarned;
+
+    saveState();
+
+    // Show results
+    showFaceScanResults(results, coinsEarned);
+}
+
+function generateFaceScanResults() {
+    const data = AppState.tempData.faceScan;
+    const height = AppState.user.height / 100; // convert to meters
+    const weight = AppState.user.weight;
+    const bmi = weight / (height * height);
+
+    // Base values with some randomization
+    let heartRate = 72 + Math.floor(Math.random() * 20) - 10;
+    let systolic = 118 + Math.floor(Math.random() * 15) - 5;
+    let diastolic = 78 + Math.floor(Math.random() * 10) - 3;
+    let spo2 = 97 + Math.floor(Math.random() * 3);
+    let respRate = 14 + Math.floor(Math.random() * 4) - 2;
+
+    // Adjust based on lifestyle factors
+    if (data.smoker === 'daily') {
+        heartRate += 8;
+        systolic += 10;
+    } else if (data.smoker === 'occasional') {
+        heartRate += 4;
+        systolic += 5;
+    }
+
+    if (data.activityLevel === 'sedentary') {
+        heartRate += 10;
+        systolic += 8;
+    } else if (data.activityLevel === 'active') {
+        heartRate -= 8;
+        systolic -= 5;
+    }
+
+    if (data.alcohol === 'heavy') {
+        systolic += 8;
+        diastolic += 5;
+    }
+
+    if (data.conditions === 'hypertension') {
+        systolic += 15;
+        diastolic += 10;
+    }
+
+    // Calculate CMS score (simplified)
+    let cmsScore = 85;
+    if (bmi > 25) cmsScore -= 10;
+    if (bmi > 30) cmsScore -= 10;
+    if (data.smoker === 'daily') cmsScore -= 15;
+    if (data.activityLevel === 'sedentary') cmsScore -= 10;
+    if (data.activityLevel === 'active') cmsScore += 5;
+    if (systolic > 130) cmsScore -= 10;
+    cmsScore = Math.max(40, Math.min(95, cmsScore));
+
+    // Calculate 10-year CVD risk (simplified Framingham-like)
+    let cvdRisk = 1.0;
+    if (data.smoker === 'daily') cvdRisk += 2.5;
+    if (bmi > 30) cvdRisk += 1.5;
+    if (systolic > 140) cvdRisk += 2.0;
+    if (data.conditions === 'hypertension') cvdRisk += 1.5;
+    cvdRisk = Math.max(0.5, Math.min(15, cvdRisk));
+
+    // Determine BP status
+    let bpStatus = 'Normal';
+    let bpWarning = false;
+    if (systolic >= 140 || diastolic >= 90) {
+        bpStatus = 'Stage 2 hypertension';
+        bpWarning = true;
+    } else if (systolic >= 130 || diastolic >= 80) {
+        bpStatus = 'Stage 1 hypertension';
+        bpWarning = true;
+    } else if (systolic >= 120) {
+        bpStatus = 'Elevated';
+    }
+
+    // Determine BMI status
+    let bmiStatus = 'Normal weight';
+    let bmiWarning = false;
+    if (bmi >= 30) {
+        bmiStatus = 'Obese';
+        bmiWarning = true;
+    } else if (bmi >= 25) {
+        bmiStatus = 'Overweight';
+        bmiWarning = true;
+    } else if (bmi < 18.5) {
+        bmiStatus = 'Underweight';
+        bmiWarning = true;
+    }
+
+    // Overall status
+    let overallStatus = 'Good';
+    if (cmsScore < 50) overallStatus = 'Needs Attention';
+    else if (cmsScore < 70) overallStatus = 'Fair';
+    else if (cmsScore >= 80) overallStatus = 'Excellent';
+
+    return {
+        heartRate,
+        systolic,
+        diastolic,
+        spo2,
+        respRate,
+        bmi: bmi.toFixed(1),
+        bmiStatus,
+        bmiWarning,
+        bpStatus,
+        bpWarning,
+        cmsScore,
+        cvdRisk: cvdRisk.toFixed(1),
+        overallStatus,
+        timestamp: new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' })
+    };
+}
+
+async function showFaceScanResults(results, coinsEarned) {
+    // Health Snapshot
+    await botMessage(`🫀 <strong>Personalised Health Report</strong>\n\n<div class="health-report-card">
+<div class="health-snapshot">
+<strong>Health Snapshot</strong> — Overall: <span class="${results.overallStatus === 'Good' || results.overallStatus === 'Excellent' ? 'status-good' : 'status-warning'}">${results.overallStatus}</span>
+
+<div class="cms-score-display">
+<div class="cms-circle" style="--cms-progress: ${results.cmsScore}%">
+<div class="cms-inner">${results.cmsScore}</div>
+</div>
+<span class="cms-label">${results.cmsScore} / 100</span>
+</div>
+
+${results.bpWarning || results.bmiWarning ?
+'Overall cardiometabolic score with a couple of areas to monitor.' :
+'Good overall cardiometabolic health. Keep up the healthy habits!'}
+</div>
+</div>
+
+📅 Assessment: ${results.timestamp} (SAST)`);
+
+    await delay(800);
+
+    // Detailed Results
+    await botMessage(`📊 <strong>Your Results</strong>
+
+<div class="results-table">
+<div class="result-row">
+<span class="metric">Cardiometabolic Score</span>
+<span class="value">${results.cmsScore}</span>
+<span class="interpretation ${results.cmsScore >= 70 ? 'good' : 'warning'}">${results.cmsScore >= 70 ? 'Good' : 'Room to improve'}</span>
+</div>
+
+<div class="result-row">
+<span class="metric">10-Year CVD Risk</span>
+<span class="value">${results.cvdRisk}%</span>
+<span class="interpretation ${parseFloat(results.cvdRisk) < 5 ? 'good' : 'warning'}">${parseFloat(results.cvdRisk) < 5 ? 'Low' : 'Moderate'}</span>
+</div>
+
+<div class="result-row">
+<span class="metric">Resting Heart Rate</span>
+<span class="value">${results.heartRate} bpm</span>
+<span class="interpretation ${results.heartRate <= 100 ? 'good' : 'warning'}">${results.heartRate <= 100 ? 'Normal' : 'Elevated'}</span>
+</div>
+
+<div class="result-row ${results.bpWarning ? 'warning-row' : ''}">
+<span class="metric">Blood Pressure</span>
+<span class="value">${results.systolic}/${results.diastolic} mmHg</span>
+<span class="interpretation ${results.bpWarning ? 'warning' : 'good'}">${results.bpWarning ? '⚠️ ' : ''}${results.bpStatus}</span>
+</div>
+
+<div class="result-row ${results.bmiWarning ? 'warning-row' : ''}">
+<span class="metric">BMI</span>
+<span class="value">${results.bmi} kg/m²</span>
+<span class="interpretation ${results.bmiWarning ? 'warning' : 'good'}">${results.bmiWarning ? '⚠️ ' : ''}${results.bmiStatus}</span>
+</div>
+
+<div class="result-row">
+<span class="metric">Respiratory Rate</span>
+<span class="value">${results.respRate} breaths/min</span>
+<span class="interpretation good">Normal</span>
+</div>
+
+<div class="result-row">
+<span class="metric">SpO₂</span>
+<span class="value">${results.spo2}%</span>
+<span class="interpretation good">Normal</span>
+</div>
+</div>`);
+
+    await delay(800);
+
+    // What this means
+    let meaningPoints = [];
+    meaningPoints.push(`Your cardiometabolic score is ${results.cmsScore >= 70 ? 'good' : 'fair'}${results.bpWarning || results.bmiWarning ? ', but some areas need attention' : ''}.`);
+
+    if (results.bpWarning) {
+        meaningPoints.push(`${results.bpStatus} detected. Confirm with a validated arm cuff and discuss with your clinician if elevated.`);
+    }
+    if (results.bmiWarning) {
+        meaningPoints.push(`BMI is in the ${results.bmiStatus.toLowerCase()} range. Modest lifestyle changes can help.`);
+    }
+    meaningPoints.push(`Heart rate and oxygen levels are within normal ranges.`);
+
+    await botMessage(`💡 <strong>What This Means</strong>\n\n${meaningPoints.map(p => '• ' + p).join('\n')}`);
+
+    await delay(800);
+
+    // Recommendations
+    let recommendations = [];
+
+    if (results.bpWarning) {
+        recommendations.push('🩺 Repeat blood pressure with a validated arm cuff and see your GP if elevated readings persist.');
+    }
+    if (results.bmiWarning && results.bmi >= 25) {
+        recommendations.push('🥗 Use the AI meal scanner to track meals and choose lower-salt, higher-fibre options.');
+    }
+    if (AppState.tempData.faceScan.activityLevel === 'sedentary' || AppState.tempData.faceScan.activityLevel === 'light') {
+        recommendations.push('🏃 Aim to earn 200 Strove points this week to meet the WHO 150-minute guideline.');
+    }
+    recommendations.push('😴 Track sleep and aim for at least 7 hours per night.');
+    recommendations.push('🔄 Repeat the face scan in 2 weeks to track trends.');
+
+    await botMessage(`✅ <strong>Recommendations</strong>\n\n<strong>Lifestyle Actions:</strong>\n${recommendations.slice(0, -1).map(r => '• ' + r).join('\n')}\n\n<strong>Next Steps:</strong>\n• ${recommendations[recommendations.length - 1]}`);
+
+    // Coins earned
+    await delay(500);
+    await botMessage(`🎉 <strong>Health check complete!</strong>\n\nYou earned <span class="coin-earned">🪙 ${coinsEarned}</span> coins.\n\nTrack your progress by doing another scan in 2 weeks.`);
+
+    AppState.tempData = {};
+
+    setButtons([
+        { label: 'View Health Summary', action: 'menu_summary', type: 'primary' },
+        { label: 'Log Activity', action: 'menu_log' },
+        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+    ]);
+
+    updateDebugPanel();
 }
 
 // ==========================================
@@ -1354,6 +1752,9 @@ function handleButtonClick(action, value) {
         case FLOWS.CONNECT_APP:
             handleConnectStep(action, value);
             break;
+        case FLOWS.FACE_SCAN:
+            handleFaceScanStep(action, value);
+            break;
         case FLOWS.CHALLENGES:
             if (action === 'join_challenge') joinChallenge();
             else if (action === 'challenge_progress') showChallengeProgress();
@@ -1385,6 +1786,9 @@ function handleMenuAction(action) {
             break;
         case 'summary':
             showHealthSummary();
+            break;
+        case 'facescan':
+            startFaceScan();
             break;
         case 'challenges':
             showChallenges();
@@ -1446,6 +1850,12 @@ function handleTextInput(input) {
         case FLOWS.LOG_ACTIVITY:
             if (AppState.flowStep === 3) {
                 handleLogActivityStep(null, trimmed);
+            }
+            break;
+
+        case FLOWS.FACE_SCAN:
+            if (AppState.flowStep === 5 || AppState.flowStep === 6) {
+                handleFaceScanStep(null, trimmed);
             }
             break;
 
