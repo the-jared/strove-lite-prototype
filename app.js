@@ -242,7 +242,7 @@ async function startOnboarding() {
     updateDebugPanel();
 
     await botMessage(`<div class="welcome-header">
-<img src="https://cdn.prod.website-files.com/6459501ed3b56130e86c5068/6459501ed3b56130e86c511c_strove-logo-dark.svg" alt="Strove" class="strove-logo">
+<img src="https://cdn.prod.website-files.com/67f77c104bf4ada12b7429ad/67f781e4a8c1bd2a97ae8fbe_strove-logo.svg" alt="Strove" class="strove-logo">
 </div>
 
 <strong>Welcome to Strove</strong> 👋
