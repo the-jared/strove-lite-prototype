@@ -3205,7 +3205,7 @@ function handleMenuAction(action) {
     }
 }
 
-function handleTextInput(input) {
+async function handleTextInput(input) {
     const trimmed = input.trim();
     if (!trimmed) return;
 
@@ -3278,13 +3278,13 @@ function handleTextInput(input) {
                         const selectedItem = items[num - 1];
                         openContent(selectedItem);
                     } else {
-                        await botMessage(`Please enter a number between 1 and ${items.length}`);
+                        botMessage(`Please enter a number between 1 and ${items.length}`);
                     }
                 } else if (isNaN(num)) {
                     // Try as search
                     searchContent(trimmed);
                 } else {
-                    await botMessage(`Please enter a number between 1 and ${Math.min(AppState.tempData.contentItems?.length || maxItems, maxItems)}`);
+                    botMessage(`Please enter a number between 1 and ${Math.min(AppState.tempData.contentItems?.length || maxItems, maxItems)}`);
                 }
             }
             // Category selection mode
