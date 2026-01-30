@@ -2510,10 +2510,15 @@ async function showContentList(items, title) {
 
     await botMessage(contentText);
 
-    // WhatsApp: max 3 buttons - show navigation only
+    // WhatsApp: max 3 buttons - show first item as quick select + navigation
+    // Truncate title to fit WhatsApp button limit (20 chars)
+    const firstItemTitle = items[0].title.length > 14
+        ? items[0].title.substring(0, 11) + '...'
+        : items[0].title;
+
     setButtons([
-        { label: '🔄 More content', action: 'content_more' },
-        { label: '📂 Categories', action: 'menu_content' },
+        { label: `1. ${getContentTypeIcon(items[0].type)} ${firstItemTitle}`, action: 'content_open', value: items[0].documentId, type: 'primary' },
+        { label: '📂 Back', action: 'menu_content' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
@@ -2618,39 +2623,40 @@ async function showVideoContent(item, coverUrl, duration, points, category) {
         videoUrl = `https://cms.strove.ai/content/${item.slug}`;
     }
 
-    let videoHtml = `🎬 <strong>${item.title}</strong>\n\n`;
+    // WhatsApp compatible: plain text formatting
+    let videoText = `🎬 ${bold(item.title)}\n\n`;
 
-    if (coverUrl) {
-        videoHtml += `<div class="video-preview">
-<img src="${coverUrl}" alt="${item.title}" class="content-cover">
-</div>\n\n`;
+    // Meta line
+    const metaParts = [category, duration, points].filter(Boolean);
+    if (metaParts.length > 0) {
+        videoText += `${metaParts.join(' • ')}\n\n`;
     }
-
-    videoHtml += `<div class="content-meta-line">${[category, duration, points].filter(Boolean).join(' • ')}</div>\n\n`;
 
     if (item.descriptionShort) {
-        videoHtml += `${item.descriptionShort}\n\n`;
+        videoText += `${item.descriptionShort}\n\n`;
     }
 
-    videoHtml += `<a href="${videoUrl}" target="_blank" class="content-link video-link">▶️ Watch Video</a>`;
+    videoText += `▶️ ${bold('Watch now:')}\n${videoUrl}`;
 
-    await botMessage(videoHtml);
-
-    const buttons = [
-        { label: '✅ Mark Complete', action: 'content_complete', value: item.documentId, type: 'primary' }
-    ];
-
-    if (item.points?.earnable) {
-        buttons[0].label = `✅ Complete & Earn ${item.points.value} pts`;
+    // Show cover image if available (works in web prototype, will be media message in WhatsApp)
+    if (coverUrl) {
+        videoText = `<img src="${coverUrl}" alt="${item.title}" class="content-cover">\n\n` + videoText;
     }
 
-    buttons.push(
-        { label: '❤️ Like', action: 'content_like', value: item.documentId },
-        { label: '📚 More Content', action: 'menu_content' },
+    await botMessage(videoText);
+
+    // Store video URL for quick open button
+    AppState.tempData.currentContentUrl = videoUrl;
+    AppState.tempData.currentContentId = item.documentId;
+
+    // WhatsApp: max 3 buttons
+    const completeLabel = item.points?.earnable ? `✅ +${item.points.value} pts` : '✅ Complete';
+
+    setButtons([
+        { label: completeLabel, action: 'content_complete', value: item.documentId, type: 'primary' },
+        { label: '📚 More', action: 'menu_content' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
-    );
-
-    setButtons(buttons);
+    ]);
 }
 
 async function showAudioContent(item, coverUrl, duration, points, category) {
@@ -2683,73 +2689,92 @@ async function showAudioContent(item, coverUrl, duration, points, category) {
         audioUrl = `https://cms.strove.ai/content/${item.slug}`;
     }
 
-    let audioHtml = `🎧 <strong>${item.title}</strong>\n\n`;
+    // WhatsApp compatible: plain text formatting
+    let audioText = `🎧 ${bold(item.title)}\n\n`;
 
-    if (coverUrl) {
-        audioHtml += `<div class="audio-preview">
-<img src="${coverUrl}" alt="${item.title}" class="content-cover audio-cover">
-</div>\n\n`;
+    // Meta line
+    const metaParts = [category, duration, points].filter(Boolean);
+    if (metaParts.length > 0) {
+        audioText += `${metaParts.join(' • ')}\n\n`;
     }
-
-    audioHtml += `<div class="content-meta-line">${[category, duration, points].filter(Boolean).join(' • ')}</div>\n\n`;
 
     if (item.descriptionShort) {
-        audioHtml += `${item.descriptionShort}\n\n`;
+        audioText += `${item.descriptionShort}\n\n`;
     }
 
-    audioHtml += `<a href="${audioUrl}" target="_blank" class="content-link audio-link">🎧 Listen Now</a>`;
+    audioText += `🎧 ${bold('Listen now:')}\n${audioUrl}`;
 
-    await botMessage(audioHtml);
-
-    const buttons = [
-        { label: '✅ Mark Complete', action: 'content_complete', value: item.documentId, type: 'primary' }
-    ];
-
-    if (item.points?.earnable) {
-        buttons[0].label = `✅ Complete & Earn ${item.points.value} pts`;
+    // Show cover image if available (works in web prototype, will be media message in WhatsApp)
+    if (coverUrl) {
+        audioText = `<img src="${coverUrl}" alt="${item.title}" class="content-cover audio-cover">\n\n` + audioText;
     }
 
-    buttons.push(
-        { label: '❤️ Like', action: 'content_like', value: item.documentId },
-        { label: '📚 More Content', action: 'menu_content' },
+    await botMessage(audioText);
+
+    // Store audio URL for quick access
+    AppState.tempData.currentContentUrl = audioUrl;
+    AppState.tempData.currentContentId = item.documentId;
+
+    // WhatsApp: max 3 buttons
+    const completeLabel = item.points?.earnable ? `✅ +${item.points.value} pts` : '✅ Complete';
+
+    setButtons([
+        { label: completeLabel, action: 'content_complete', value: item.documentId, type: 'primary' },
+        { label: '📚 More', action: 'menu_content' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
-    );
-
-    setButtons(buttons);
+    ]);
 }
 
 async function showArticleContent(item, coverUrl, category) {
     // Get full article content
     const articleText = item.richText || item.descriptionLong || item.descriptionShort || '';
 
-    let articleHtml = `📖 <strong>${item.title}</strong>\n\n`;
+    // WhatsApp compatible: plain text formatting
+    let contentText = `📖 ${bold(item.title)}\n\n`;
 
     if (category) {
-        articleHtml += `<div class="content-category-tag">${category}</div>\n\n`;
+        contentText += `${italic(category)}\n\n`;
     }
 
+    // Show cover image if available (works in web, will be media in WhatsApp)
     if (coverUrl) {
-        articleHtml += `<img src="${coverUrl}" alt="${item.title}" class="article-image">\n\n`;
+        contentText = `<img src="${coverUrl}" alt="${item.title}" class="article-image">\n\n` + contentText;
     }
 
-    // Show the full article content
+    // Show the article content (strip HTML tags for WhatsApp)
     if (articleText) {
-        articleHtml += `<div class="article-body">${articleText}</div>`;
+        // Basic HTML to plain text conversion
+        const plainText = articleText
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .trim();
+
+        // Truncate if too long for WhatsApp (1600 char limit)
+        const maxLen = WHATSAPP_LIMITS.MAX_MESSAGE_LENGTH - contentText.length - 50;
+        if (plainText.length > maxLen) {
+            contentText += plainText.substring(0, maxLen) + '...\n\n' + italic('(Article truncated)');
+        } else {
+            contentText += plainText;
+        }
     } else {
-        articleHtml += `<p><em>No content available for this article.</em></p>`;
+        contentText += italic('No content available for this article.');
     }
 
-    await botMessage(articleHtml);
+    await botMessage(contentText);
 
     // Show tags if available
     if (item.tags && item.tags.length > 0) {
         const tagsList = item.tags.map(t => t.name).join(' • ');
-        await botMessage(`<div class="article-tags">🏷️ ${tagsList}</div>`);
+        await botMessage(`🏷️ ${tagsList}`);
     }
 
+    // WhatsApp: max 3 buttons
     setButtons([
-        { label: '❤️ Like', action: 'content_like', value: item.documentId },
-        { label: '📚 More Content', action: 'menu_content', type: 'primary' },
+        { label: '❤️ Like', action: 'content_like', value: item.documentId, type: 'primary' },
+        { label: '📚 More', action: 'menu_content' },
         { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
@@ -3246,15 +3271,39 @@ function handleTextInput(input) {
             // Number selection mode - user typed a number to select content
             else if (AppState.flowStep === 2) {
                 const num = parseInt(trimmed);
-                if (num >= 1 && num <= 8 && AppState.tempData.contentItems) {
+                const maxItems = WHATSAPP_LIMITS.MAX_LIST_ITEMS;
+                if (num >= 1 && num <= maxItems && AppState.tempData.contentItems) {
                     const items = AppState.tempData.contentItems;
                     if (num <= items.length) {
                         const selectedItem = items[num - 1];
                         openContent(selectedItem);
+                    } else {
+                        await botMessage(`Please enter a number between 1 and ${items.length}`);
                     }
-                } else {
+                } else if (isNaN(num)) {
                     // Try as search
                     searchContent(trimmed);
+                } else {
+                    await botMessage(`Please enter a number between 1 and ${Math.min(AppState.tempData.contentItems?.length || maxItems, maxItems)}`);
+                }
+            }
+            // Category selection mode
+            else if (AppState.flowStep === 3) {
+                const num = parseInt(trimmed);
+                if (num >= 1 && num <= contentCategories.length && AppState.tempData.browseCategories) {
+                    const category = AppState.tempData.browseCategories[num - 1];
+                    showContentByCategory(category.slug);
+                } else if (isNaN(num)) {
+                    // Try to match category name
+                    const matchedCat = contentCategories.find(c =>
+                        c.name.toLowerCase().includes(trimmed.toLowerCase()) ||
+                        c.slug.toLowerCase().includes(trimmed.toLowerCase())
+                    );
+                    if (matchedCat) {
+                        showContentByCategory(matchedCat.slug);
+                    } else {
+                        searchContent(trimmed);
+                    }
                 }
             }
             break;
