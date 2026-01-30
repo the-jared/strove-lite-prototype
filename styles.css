@@ -683,3 +683,38 @@ body {
 .success-banner strong {
     color: #00a884;
 }
+
+/* ==========================================
+   WELCOME / BRANDING STYLES
+   ========================================== */
+
+.welcome-header {
+    text-align: center;
+    padding: 16px 0;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.1) 0%, rgba(0, 168, 132, 0.05) 100%);
+    border-radius: 12px;
+}
+
+.strove-logo {
+    max-width: 140px;
+    height: auto;
+    filter: brightness(0) invert(1);
+}
+
+.welcome-links {
+    margin: 12px 0;
+    padding: 8px 12px;
+    background-color: rgba(0, 168, 132, 0.1);
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.welcome-links a {
+    color: #00a884 !important;
+    font-weight: 500;
+}
+
+.welcome-links a:hover {
+    color: #06cf9c !important;
+}

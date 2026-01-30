@@ -241,7 +241,21 @@ async function startOnboarding() {
     AppState.flowStep = 0;
     updateDebugPanel();
 
-    await botMessage("Welcome to Strove 👋\n\nWe help you build healthy habits at work.\n\nWe'll only message you if you opt in, and you can stop anytime by typing STOP.\n\nTo continue, choose an option below.");
+    await botMessage(`<div class="welcome-header">
+<img src="https://cdn.prod.website-files.com/6459501ed3b56130e86c5068/6459501ed3b56130e86c511c_strove-logo-dark.svg" alt="Strove" class="strove-logo">
+</div>
+
+<strong>Welcome to Strove</strong> 👋
+
+We help you build healthy habits at work through daily check-ins, activity tracking, challenges, and AI-powered health insights.
+
+<div class="welcome-links">
+🌐 <a href="https://www.strove.ai/" target="_blank">www.strove.ai</a>
+</div>
+
+We'll only message you if you opt in, and you can stop anytime by typing STOP.
+
+To continue, choose an option below.`);
 
     setButtons([
         { label: '✅ I agree – continue', action: 'onboard_agree', type: 'primary' },
