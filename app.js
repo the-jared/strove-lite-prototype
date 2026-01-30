@@ -1562,11 +1562,10 @@ async function startConnectApp() {
     await botMessage("Which service would you like to connect?");
 
     setButtons([
-        { label: 'Apple Health', action: 'connect_service', value: 'Apple Health' },
-        { label: 'Google Fit', action: 'connect_service', value: 'Google Fit' },
         { label: 'Garmin', action: 'connect_service', value: 'Garmin' },
         { label: 'Fitbit', action: 'connect_service', value: 'Fitbit' },
-        { label: 'Samsung Health', action: 'connect_service', value: 'Samsung Health' },
+        { label: 'Strava', action: 'connect_service', value: 'Strava' },
+        { label: 'Polar', action: 'connect_service', value: 'Polar' },
         { label: 'Other / Not sure', action: 'connect_other', type: 'secondary' }
     ]);
 }
