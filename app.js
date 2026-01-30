@@ -2053,17 +2053,9 @@ async function fetchContentDetail(documentId) {
         return contentDetailCache.get(documentId);
     }
 
-    const token = getContentApiToken();
-    if (!token) {
-        console.log('No Content API token configured, using list data');
-        return null;
-    }
-
     try {
-        const response = await fetch(`${CONTENT_API_BASE}/${documentId}`, {
-            method: 'GET',
-            headers: getContentApiHeaders()
-        });
+        // Use public API endpoint (cms.strove.ai) which returns full content including body/actions
+        const response = await fetch(`${CONTENT_API_URL}/${documentId}`);
 
         if (!response.ok) {
             console.error('Content detail fetch failed:', response.status);
