@@ -764,6 +764,42 @@ body {
 }
 
 /* ==========================================
+   MENU STATS HEADER
+   ========================================== */
+
+.menu-stats {
+    display: inline-block;
+    background-color: rgba(0, 168, 132, 0.15);
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    color: #00a884;
+    margin-top: 4px;
+}
+
+/* ==========================================
+   TREND INDICATORS
+   ========================================== */
+
+.trend-up {
+    color: #00a884;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.trend-down {
+    color: #f59e0b;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.trend-stable {
+    color: #8696a0;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+/* ==========================================
    AI CHAT STYLES
    ========================================== */
 

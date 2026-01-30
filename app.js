@@ -176,6 +176,24 @@ function loadState() {
     }
 }
 
+// Check for coin milestones
+function checkCoinMilestone(oldCoins, newCoins) {
+    const milestones = [
+        { threshold: 50, message: "You've hit 50 coins! 🪙" },
+        { threshold: 100, message: "100 coins — you can redeem your first reward! 🎁" },
+        { threshold: 250, message: "250 coins! You're on fire! 🔥" },
+        { threshold: 500, message: "500 coins — halfway to the big rewards! 💪" },
+        { threshold: 1000, message: "1,000 coins! You're a Strove legend! 🏆" }
+    ];
+
+    for (const milestone of milestones) {
+        if (oldCoins < milestone.threshold && newCoins >= milestone.threshold) {
+            return milestone.message;
+        }
+    }
+    return null;
+}
+
 // ==========================================
 // MESSAGE RENDERING
 // ==========================================
@@ -344,7 +362,7 @@ async function handleOnboardingStep(action, value) {
         case 2: // Email/ID input
             AppState.user.email = value;
             AppState.flowStep = 3;
-            await botMessage("Thanks — we're securing your account.\n\nWe've sent a 6-digit code to your email.\nPlease enter it here.\n\n<em>(For demo: enter any 6 digits)</em>");
+            await botMessage("Thanks — we're securing your account.\n\nWe've sent a 6-digit code to your email.\nPlease enter it here.");
             clearButtons();
             break;
 
@@ -355,7 +373,7 @@ async function handleOnboardingStep(action, value) {
             } else if (value.toUpperCase() === 'RESEND') {
                 await botMessage("Done — we've sent a new code. Please enter it here.");
             } else {
-                await botMessage("That code doesn't look right. Please try again, or type RESEND.\n\n<em>(For demo: enter any 6 digits)</em>");
+                await botMessage("Hmm, that code didn't match. Double-check your email and try again, or type RESEND.");
             }
             break;
 
@@ -420,14 +438,14 @@ async function handleExtendedProfileStep(action, value) {
             addMessage(value || 'Prefer not to say', true);
             AppState.user.gender = value;
             AppState.flowStep = 1;
-            await botMessage("What's your height in cm?\n\nExample: 175\n\n<em>(Type SKIP to skip)</em>");
+            await botMessage("What's your height in cm?\n\nExample: 175 (or type SKIP)");
             clearButtons();
             break;
 
         case 1: // Height
             if (value.toUpperCase() === 'SKIP') {
                 AppState.flowStep = 2;
-                await botMessage("What's your weight in kg?\n\nExample: 82\n\n<em>(Type SKIP to skip)</em>");
+                await botMessage("What's your weight in kg?\n\nExample: 82 (or type SKIP)");
             } else {
                 const height = parseInt(value);
                 if (isNaN(height) || height < 50 || height > 300) {
@@ -435,7 +453,7 @@ async function handleExtendedProfileStep(action, value) {
                 } else {
                     AppState.user.height = height;
                     AppState.flowStep = 2;
-                    await botMessage("What's your weight in kg?\n\nExample: 82\n\n<em>(Type SKIP to skip)</em>");
+                    await botMessage("What's your weight in kg?\n\nExample: 82 (or type SKIP)");
                 }
             }
             break;
@@ -544,7 +562,13 @@ async function showMainMenu() {
     AppState.currentFlow = FLOWS.MAIN_MENU;
     updateDebugPanel();
 
-    await botMessage("What would you like to do?");
+    // Show personalized menu header with stats
+    const greeting = AppState.user.firstName ? `Hey ${AppState.user.firstName}!` : 'Hey there!';
+    const streakBadge = AppState.streak > 0 ? `🔥 ${AppState.streak} day streak` : '';
+    const coinsBadge = `🪙 ${AppState.coins} coins`;
+    const statsLine = [streakBadge, coinsBadge].filter(Boolean).join(' • ');
+
+    await botMessage(`${greeting} ${statsLine ? `<div class="menu-stats">${statsLine}</div>` : ''}\n\nWhat would you like to do?`);
 
     setButtons([
         { label: '✅ Check-in', action: 'menu_checkin', type: 'primary' },
@@ -660,6 +684,25 @@ async function handleCheckInStep(action, value) {
         case 4: // Diet
             addMessage(value ? ['Poor', 'Okay', 'Good'][value - 1] : 'Skip', true);
             AppState.tempData.diet = value;
+            AppState.flowStep = 5;
+            await botMessage("How's your mood right now?");
+            setButtons([
+                { label: '😊 Great', action: 'mood', value: 5 },
+                { label: '🙂 Good', action: 'mood', value: 4 },
+                { label: '😐 Okay', action: 'mood', value: 3 },
+                { label: '😔 Low', action: 'mood', value: 2 },
+                { label: 'Skip', action: 'mood', value: null, type: 'secondary' }
+            ]);
+            break;
+
+        case 5: // Mood
+            if (value) {
+                const moodLabels = ['', '', '😔 Low', '😐 Okay', '🙂 Good', '😊 Great'];
+                addMessage(moodLabels[value], true);
+            } else {
+                addMessage('Skip', true);
+            }
+            AppState.tempData.mood = value;
             completeCheckIn();
             break;
     }
@@ -671,6 +714,9 @@ async function completeCheckIn() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
+    // Check if first check-in ever
+    const isFirstCheckIn = AppState.streak === 0 && !AppState.lastCheckIn;
+
     // Update streak
     if (AppState.lastCheckIn === yesterday.toDateString()) {
         AppState.streak++;
@@ -681,21 +727,42 @@ async function completeCheckIn() {
     AppState.lastCheckIn = today;
     AppState.checkInToday = true;
 
-    // Award coins
+    // Award coins and check for milestones
     const coinsEarned = 10 + (AppState.streak > 7 ? 5 : 0);
+    const oldCoins = AppState.coins;
     AppState.coins += coinsEarned;
+    const coinMilestone = checkCoinMilestone(oldCoins, AppState.coins);
 
-    // Generate focus action based on responses
-    let focusAction = "Take a 10-minute walk after lunch.";
+    // Generate focus action based on responses with empathetic tone
+    let focusAction = "Take a 10-minute walk after lunch — fresh air does wonders.";
+    let empathyNote = "";
+
     if (AppState.tempData.sleep && AppState.tempData.sleep < 3) {
         focusAction = "Try to get to bed 30 minutes earlier tonight.";
+        empathyNote = "Rough night? That's okay — today's a fresh start. ";
     } else if (AppState.tempData.stress && AppState.tempData.stress > 3) {
-        focusAction = "Take 5 minutes for deep breathing between meetings.";
+        focusAction = "Take 5 minutes for deep breathing between tasks.";
+        empathyNote = "Sounds like a lot on your plate. You're doing great just by checking in. ";
     } else if (AppState.tempData.diet && AppState.tempData.diet < 2) {
         focusAction = "Drink a glass of water and grab a healthy snack.";
     }
 
-    await botMessage(`✅ Check-in complete.\n\nToday's focus:\n${focusAction}\n\nYou earned <span class="coin-earned">🪙 ${coinsEarned}</span> coins.\nStreak: ${AppState.streak} days 🔥`);
+    // Build celebration message based on context
+    let celebration = "✅ Check-in complete!";
+    let streakMessage = `🔥 ${AppState.streak} day streak`;
+
+    if (isFirstCheckIn) {
+        celebration = "🎉 First check-in complete! You've taken the first step — this is where it all begins.";
+    } else if (AppState.streak === 7) {
+        streakMessage = "🔥 One week strong! You're building a real habit here.";
+    } else if (AppState.streak === 30) {
+        streakMessage = "🏆 30 days! Incredible consistency — you're crushing it!";
+    } else if (AppState.streak > 7) {
+        streakMessage = `🔥 ${AppState.streak} days strong — amazing consistency!`;
+    }
+
+    let milestoneMessage = coinMilestone ? `\n\n🎉 <strong>Milestone:</strong> ${coinMilestone}` : '';
+    await botMessage(`${celebration}\n\n${empathyNote}Today's focus:\n${focusAction}\n\nYou earned <span class="coin-earned">🪙 ${coinsEarned}</span> coins.\n${streakMessage}${milestoneMessage}`);
 
     AppState.tempData = {};
     saveState();
@@ -712,7 +779,7 @@ async function completeCheckIn() {
         setButtons([
             { label: 'Health summary', action: 'menu_summary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     }
 
@@ -742,7 +809,7 @@ async function showHealthSummary() {
         setButtons([
             { label: '🔗 Connect', action: 'goto_connect', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
@@ -753,19 +820,28 @@ async function showHealthSummary() {
         ? (meals.reduce((sum, m) => sum + m.score, 0) / meals.length).toFixed(1)
         : 'N/A';
 
-    // Calculate step trend
+    // Calculate step trend and week-over-week comparisons
     const recentSteps = data.dailySteps.slice(-3);
     const earlierSteps = data.dailySteps.slice(0, 3);
     const recentAvg = recentSteps.reduce((a, b) => a + b, 0) / recentSteps.length;
     const earlierAvg = earlierSteps.reduce((a, b) => a + b, 0) / earlierSteps.length;
-    const stepTrend = recentAvg > earlierAvg ? '↑' : recentAvg < earlierAvg ? '↓' : '→';
+    const stepChange = Math.round(((recentAvg - earlierAvg) / earlierAvg) * 100);
+    const stepTrend = stepChange > 5 ? `<span class="trend-up">↑ ${stepChange}%</span>` :
+                      stepChange < -5 ? `<span class="trend-down">↓ ${Math.abs(stepChange)}%</span>` :
+                      '<span class="trend-stable">→ stable</span>';
+
+    // Simulated last week comparisons
+    const lastWeekMinutes = Math.round(data.activeMinutes * 0.85);
+    const minutesChange = Math.round(((data.activeMinutes - lastWeekMinutes) / lastWeekMinutes) * 100);
+    const minutesTrend = minutesChange > 0 ? `<span class="trend-up">↑ ${minutesChange}% vs last week</span>` :
+                         minutesChange < 0 ? `<span class="trend-down">↓ ${Math.abs(minutesChange)}%</span>` : '';
 
     await botMessage(`📊 <strong>Your Weekly Health Summary</strong>
 
 <div class="summary-card">
 <div class="summary-section">
 <strong>🏃 Activity</strong>
-• Active minutes: <strong>${data.activeMinutes} min</strong>
+• Active minutes: <strong>${data.activeMinutes} min</strong> ${minutesTrend}
 • Total steps: <strong>${data.steps.toLocaleString()}</strong> ${stepTrend}
 • Distance: <strong>${data.distance} km</strong>
 • Workouts: <strong>${data.workouts.length}</strong> sessions
@@ -773,8 +849,8 @@ async function showHealthSummary() {
 
 <div class="summary-section">
 <strong>❤️ Vitals</strong>
-• Avg heart rate: <strong>${data.heartRateAvg} bpm</strong>
-• Resting HR: <strong>${data.restingHR} bpm</strong>
+• Avg heart rate: <strong>${data.heartRateAvg}</strong> beats per minute
+• Resting HR: <strong>${data.restingHR}</strong> bpm
 • Calories burned: ~<strong>${data.calories}/day</strong>
 </div>
 
@@ -804,7 +880,7 @@ async function showHealthSummary() {
     setButtons([
         { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
         { label: 'Monthly summary', action: 'monthly_summary' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -840,7 +916,7 @@ async function showMonthlySummary() {
     setButtons([
         { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
         { label: 'Weekly summary', action: 'menu_summary' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -864,7 +940,7 @@ async function showChallenges() {
         { label: 'Join challenge', action: 'join_challenge', type: 'primary' },
         { label: 'My progress', action: 'challenge_progress' },
         { label: 'Reminder settings', action: 'challenge_reminders' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -878,7 +954,7 @@ async function joinChallenge() {
         setButtons([
             { label: 'My progress', action: 'challenge_progress', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     } else {
         await botMessage("✅ You're in!\n\nTo track progress automatically, connect a fitness app.\nOr log activity manually when you exercise.");
@@ -886,7 +962,7 @@ async function joinChallenge() {
             { label: '🔗 Connect', action: 'goto_connect', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
             { label: 'My progress', action: 'challenge_progress' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     }
     updateDebugPanel();
@@ -906,7 +982,7 @@ async function showChallengeProgress() {
     setButtons([
         { label: 'Log activity', action: 'menu_log', type: 'primary' },
         { label: 'Health summary', action: 'menu_summary' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -932,7 +1008,7 @@ async function showMyScore() {
         setButtons([
             { label: '🔗 Connect', action: 'goto_connect', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
@@ -950,7 +1026,7 @@ async function showMyScore() {
     setButtons([
         { label: 'Improve my score', action: 'improve_score', type: 'primary' },
         { label: 'Health summary', action: 'menu_summary' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -960,7 +1036,7 @@ async function showImproveScore() {
     setButtons([
         { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
         { label: 'Log activity', action: 'menu_log' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -978,7 +1054,7 @@ async function showLogActivity() {
     setButtons([
         { label: 'Log manually', action: 'log_manual', type: 'primary' },
         { label: 'Connect fitness app', action: 'goto_connect' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1097,7 +1173,7 @@ async function completeActivityLog() {
     setButtons([
         { label: 'Health summary', action: 'menu_summary' },
         { label: 'Challenges', action: 'menu_challenges' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 
     updateDebugPanel();
@@ -1129,16 +1205,16 @@ async function handleConnectStep(action, value) {
         addMessage(value, true);
         AppState.tempData.connectingService = value;
 
-        await botMessage(`Perfect. We'll open a secure link to connect your account.\n\n<a href="#" onclick="simulateConnection('${value}'); return false;">🔗 Connect ${value}</a>\n\n<em>(Click the link to simulate connection)</em>`);
+        await botMessage(`Perfect. We'll open a secure link to connect your account.\n\n<a href="#" onclick="simulateConnection('${value}'); return false;">🔗 Connect ${value}</a>`);
 
         setButtons([
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     } else if (action === 'connect_other') {
         await botMessage("No problem. You can also log activity manually for now.\n\nWe'll add more services soon!");
         setButtons([
             { label: 'Log manually', action: 'menu_log', type: 'primary' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     }
 }
@@ -1155,7 +1231,7 @@ window.simulateConnection = async function(service) {
 
     setButtons([
         { label: '✅ Do check-in', action: 'menu_checkin', type: 'primary' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 
     updateDebugPanel();
@@ -1175,7 +1251,7 @@ async function showCoins() {
         { label: 'Redeem rewards', action: 'redeem_rewards', type: 'primary' },
         { label: 'How to earn more', action: 'earn_more' },
         { label: 'Recent earnings', action: 'recent_earnings' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1184,7 +1260,7 @@ async function showRecentEarnings() {
 
     setButtons([
         { label: 'Redeem rewards', action: 'redeem_rewards', type: 'primary' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1195,7 +1271,7 @@ async function showEarnMore() {
         { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
         { label: '🫀 Face scan', action: 'menu_facescan' },
         { label: 'Log activity', action: 'menu_log' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1206,13 +1282,13 @@ async function showRedeemRewards() {
         setButtons([
             { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     } else {
-        await botMessage(`🎁 Popular rewards\n\n• Coffee voucher (100 coins)\n• Wellness item (200 coins)\n• Fitness gear (500 coins)\n\nRedeem securely here:\n<a href="#">🔗 Redeem rewards</a>\n\n<em>(Demo only - link simulated)</em>`);
+        await botMessage(`🎁 Popular rewards\n\n• Coffee voucher (100 coins)\n• Wellness item (200 coins)\n• Fitness gear (500 coins)\n\nRedeem securely here:\n<a href="#">🔗 Redeem rewards</a>`);
 
         setButtons([
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     }
 }
@@ -1226,12 +1302,13 @@ async function showMealScan() {
     AppState.flowStep = 0;
     updateDebugPanel();
 
-    await botMessage("🍽 Send a photo of your meal.\n\nWe'll reply with simple feedback.\n\n<em>(For demo: type 'photo' to simulate upload)</em>");
+    await botMessage("🍽 Send a photo of your meal and we'll give you simple feedback.\n\nJust upload or describe your meal to get started.");
     clearButtons();
 }
 
 async function handleMealScan(input) {
-    if (input.toLowerCase().includes('photo') || input.toLowerCase().includes('image')) {
+    // Accept any input as a meal description or photo upload
+    if (input.trim().length > 0) {
         // Simulate processing
         await botMessage("Analyzing your meal...");
         await delay(1500);
@@ -1261,14 +1338,7 @@ async function handleMealScan(input) {
 
         setButtons([
             { label: 'Scan another', action: 'menu_meal', type: 'primary' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
-        ]);
-    } else {
-        await botMessage("Sorry — we couldn't process that.\n\nPlease try again with a clearer photo in good light.\n\n<em>(For demo: type 'photo' to simulate)</em>");
-
-        setButtons([
-            { label: 'Try again', action: 'menu_meal' },
-            { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
         ]);
     }
 }
@@ -1398,7 +1468,7 @@ async function showFaceScanCamera() {
     await botMessage("✅ Questions complete!\n\nNow for the face scan.\n\n<strong>Instructions:</strong>\n• Find good lighting (natural light is best)\n• Face the camera directly\n• Keep still for 30 seconds\n• Remove glasses if possible");
 
     await delay(500);
-    await botMessage("📷 <strong>Ready to scan?</strong>\n\nWe'll use your camera to measure:\n• Heart rate\n• Blood pressure (estimate)\n• Oxygen saturation\n• Respiratory rate\n\n<em>For demo: Click 'Start Scan' to simulate</em>");
+    await botMessage("📷 <strong>Ready to scan?</strong>\n\nWe'll use your camera to measure:\n• Heart rate\n• Blood pressure (estimate)\n• Blood oxygen levels\n• Breathing rate");
 
     setButtons([
         { label: '📷 Start Scan', action: 'fs_start_scan', type: 'primary' },
@@ -1559,8 +1629,8 @@ async function showFaceScanResults(results, coinsEarned) {
 </div>
 
 ${results.bpWarning || results.bmiWarning ?
-'Overall cardiometabolic score with a couple of areas to monitor.' :
-'Good overall cardiometabolic health. Keep up the healthy habits!'}
+'Good overall heart health with a couple of areas to monitor.' :
+'Great heart health! Keep up the healthy habits!'}
 </div>
 </div>
 
@@ -1573,13 +1643,13 @@ ${results.bpWarning || results.bmiWarning ?
 
 <div class="results-table">
 <div class="result-row">
-<span class="metric">Cardiometabolic Score</span>
+<span class="metric">Heart Health Score</span>
 <span class="value">${results.cmsScore}</span>
 <span class="interpretation ${results.cmsScore >= 70 ? 'good' : 'warning'}">${results.cmsScore >= 70 ? 'Good' : 'Room to improve'}</span>
 </div>
 
 <div class="result-row">
-<span class="metric">10-Year CVD Risk</span>
+<span class="metric">10-Year Heart Risk</span>
 <span class="value">${results.cvdRisk}%</span>
 <span class="interpretation ${parseFloat(results.cvdRisk) < 5 ? 'good' : 'warning'}">${parseFloat(results.cvdRisk) < 5 ? 'Low' : 'Moderate'}</span>
 </div>
@@ -1603,13 +1673,13 @@ ${results.bpWarning || results.bmiWarning ?
 </div>
 
 <div class="result-row">
-<span class="metric">Respiratory Rate</span>
+<span class="metric">Breathing Rate</span>
 <span class="value">${results.respRate} breaths/min</span>
 <span class="interpretation good">Normal</span>
 </div>
 
 <div class="result-row">
-<span class="metric">SpO₂</span>
+<span class="metric">Blood Oxygen</span>
 <span class="value">${results.spo2}%</span>
 <span class="interpretation good">Normal</span>
 </div>
@@ -1619,7 +1689,7 @@ ${results.bpWarning || results.bmiWarning ?
 
     // What this means
     let meaningPoints = [];
-    meaningPoints.push(`Your cardiometabolic score is ${results.cmsScore >= 70 ? 'good' : 'fair'}${results.bpWarning || results.bmiWarning ? ', but some areas need attention' : ''}.`);
+    meaningPoints.push(`Your heart health score is ${results.cmsScore >= 70 ? 'good' : 'fair'}${results.bpWarning || results.bmiWarning ? ', but some areas need attention' : ''}.`);
 
     if (results.bpWarning) {
         meaningPoints.push(`${results.bpStatus} detected. Confirm with a validated arm cuff and discuss with your clinician if elevated.`);
@@ -1659,7 +1729,7 @@ ${results.bpWarning || results.bmiWarning ?
     setButtons([
         { label: 'View Health Summary', action: 'menu_summary', type: 'primary' },
         { label: 'Log Activity', action: 'menu_log' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 
     updateDebugPanel();
@@ -1682,7 +1752,7 @@ async function startAIChat() {
         { label: '🍽 Nutrition tips', action: 'ai_nutrition' },
         { label: '😴 Sleep insights', action: 'ai_sleep' },
         { label: '💪 Motivation', action: 'ai_motivation' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1737,12 +1807,12 @@ ${checkIns.map(c => `- ${c.date}: Sleep ${c.sleep}/5, Stress ${c.stress}/5, Acti
     if (faceScan) {
         context += `
 LATEST FACE SCAN RESULTS:
-- Cardiometabolic Score: ${faceScan.cmsScore}/100
+- Heart Health Score: ${faceScan.cmsScore}/100
 - Blood Pressure: ${faceScan.systolic}/${faceScan.diastolic} mmHg (${faceScan.bpStatus})
 - Heart Rate: ${faceScan.heartRate} bpm
 - BMI: ${faceScan.bmi} (${faceScan.bmiStatus})
 - SpO2: ${faceScan.spo2}%
-- 10-Year CVD Risk: ${faceScan.cvdRisk}%
+- 10-Year Heart Risk: ${faceScan.cvdRisk}%
 `;
     }
 
@@ -1916,7 +1986,7 @@ async function processAIChat(userMessage) {
         { label: '💬 Ask more', action: 'ai_continue', type: 'primary' },
         { label: '📊 Analyze my week', action: 'ai_analyze_week' },
         { label: '💪 Motivation', action: 'ai_motivation' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1938,7 +2008,7 @@ async function showSettings() {
         { label: 'Connected apps', action: 'settings_apps' },
         { label: 'Language', action: 'settings_language' },
         { label: 'Stop messages', action: 'settings_stop', type: 'secondary' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1960,7 +2030,7 @@ async function handleSettingsStep(action, value) {
             await botMessage("✅ Done. Reminder preferences updated.");
             setButtons([
                 { label: 'Settings', action: 'menu_settings' },
-                { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2004,7 +2074,7 @@ async function handleSettingsStep(action, value) {
             await botMessage(`✅ ${disconnected} disconnected.`);
             setButtons([
                 { label: 'Settings', action: 'menu_settings' },
-                { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2024,7 +2094,7 @@ async function handleSettingsStep(action, value) {
             await botMessage("✅ Done. Language updated.");
             setButtons([
                 { label: 'Settings', action: 'menu_settings' },
-                { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2057,7 +2127,7 @@ async function startHelpFlow() {
         { label: 'How to use Strove Lite', action: 'help_usage' },
         { label: 'Contact support', action: 'help_support' },
         { label: 'Privacy & data', action: 'help_privacy' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2066,7 +2136,7 @@ async function handleHelpStep(action, value) {
         case 'help_usage':
             await botMessage("Here are the main commands:\n\n• Check-in (daily)\n• Health summary (weekly/monthly)\n• Log activity\n• Coins / Redeem\n• Challenges\n\nType MENU any time to see options.\nType HELP for assistance.\nType STOP to unsubscribe.");
             setButtons([
-                { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2089,9 +2159,9 @@ async function handleHelpStep(action, value) {
             break;
 
         case 'help_privacy':
-            await botMessage("We only use your data to provide Strove services in line with our privacy policy.\n\nYou can:\n• opt out any time (type STOP)\n• request data access or deletion via a secure form\n\n<a href='#'>Request data access/deletion</a>\n\n<em>(Demo only - link simulated)</em>");
+            await botMessage("We only use your data to provide Strove services in line with our privacy policy.\n\nYou can:\n• opt out any time (type STOP)\n• request data access or deletion via a secure form\n\n<a href='#'>Request data access/deletion</a>");
             setButtons([
-                { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
             ]);
             break;
     }
@@ -2102,7 +2172,7 @@ async function handleSupportDescription(input) {
     AppState.tempData = {};
     setButtons([
         { label: 'Help menu', action: 'menu_help' },
-        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
     AppState.currentFlow = FLOWS.HELP;
 }
@@ -2235,7 +2305,7 @@ function handleTextInput(input) {
             } else {
                 botMessage("Sorry — I didn't understand that.\n\nType MENU to see options, or type HELP for support.");
                 setButtons([
-                    { label: 'MENU', action: 'goto_menu' },
+                    { label: 'Menu', action: 'goto_menu' },
                     { label: 'HELP', action: 'menu_help' }
                 ]);
             }
