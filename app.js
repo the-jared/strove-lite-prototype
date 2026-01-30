@@ -2107,33 +2107,29 @@ async function showContentList(items, title) {
         return;
     }
 
-    let contentHtml = `<strong>${title}</strong>\n\n<div class="content-list">`;
+    // Store items for quick selection by number
+    AppState.tempData.contentItems = items;
 
-    items.forEach((item, index) => {
-        const coverUrl = item.cover?.formats?.thumbnail?.url || item.cover?.url || '';
-        const duration = item.duration?.label || '';
-        const points = item.points?.value ? `🪙 ${item.points.value} pts` : '';
-        const typeIcon = item.type === 'video' ? '🎬' : '📖';
-        const tags = item.tags?.slice(0, 2).map(t => t.name).join(', ') || '';
+    let contentHtml = `<strong>${title}</strong>\n\nTap a number to open:\n\n`;
 
-        contentHtml += `
-<div class="content-item" data-id="${item.documentId}">
-    ${coverUrl ? `<img src="${coverUrl}" alt="${item.title}" class="content-thumb">` : ''}
-    <div class="content-info">
-        <div class="content-title">${typeIcon} ${item.title}</div>
-        <div class="content-meta">${[duration, points, tags].filter(Boolean).join(' • ')}</div>
-    </div>
+    items.slice(0, 8).forEach((item, index) => {
+        const typeIcon = getContentTypeIcon(item.type);
+        const duration = item.duration?.label ? `(${item.duration.label})` : '';
+        const points = item.points?.value ? `🪙 ${item.points.value}` : '';
+
+        contentHtml += `<div class="content-list-item">
+<strong>${index + 1}.</strong> ${typeIcon} ${item.title} ${duration} ${points}
 </div>`;
     });
 
-    contentHtml += '</div>';
+    contentHtml += `\n<em>Type a number (1-${Math.min(items.length, 8)}) to open</em>`;
 
     await botMessage(contentHtml);
 
-    // Create buttons for each item
-    const itemButtons = items.slice(0, 4).map(item => ({
-        label: (item.type === 'video' ? '🎬 ' : '📖 ') + item.title.substring(0, 20) + (item.title.length > 20 ? '...' : ''),
-        action: 'content_view',
+    // Create numbered buttons for quick selection
+    const itemButtons = items.slice(0, 6).map((item, index) => ({
+        label: `${index + 1}. ${getContentTypeIcon(item.type)} ${item.title.substring(0, 15)}${item.title.length > 15 ? '...' : ''}`,
+        action: 'content_open',
         value: item.documentId
     }));
 
@@ -2142,6 +2138,18 @@ async function showContentList(items, title) {
         { label: '← Back', action: 'menu_content' },
         { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
+
+    // Enable number selection mode
+    AppState.flowStep = 2;
+}
+
+function getContentTypeIcon(type) {
+    switch(type) {
+        case 'video': return '🎬';
+        case 'audio': return '🎧';
+        case 'podcast': return '🎙️';
+        default: return '📖';
+    }
 }
 
 async function showContentDetail(documentId) {
@@ -2157,83 +2165,145 @@ async function showContentDetail(documentId) {
         return;
     }
 
+    // Directly open content based on type
+    await openContent(item);
+}
+
+async function openContent(item) {
+    const typeIcon = getContentTypeIcon(item.type);
     const coverUrl = item.cover?.formats?.medium?.url || item.cover?.url || '';
-    const typeIcon = item.type === 'video' ? '🎬' : '📖';
     const duration = item.duration?.label ? `⏱ ${item.duration.label}` : '';
-    const points = item.points?.value ? `🪙 Earn ${item.points.value} points` : '';
+    const points = item.points?.value ? `🪙 ${item.points.value} points` : '';
     const category = item.category?.name || '';
-    const tags = item.tags?.map(t => t.name).join(', ') || '';
 
-    let detailHtml = `
-<div class="content-detail">
-    ${coverUrl ? `<img src="${coverUrl}" alt="${item.title}" class="content-cover">` : ''}
-    <h3>${typeIcon} ${item.title}</h3>
-    <div class="content-meta-detail">
-        ${[category, duration, points].filter(Boolean).join(' • ')}
-    </div>
-    ${tags ? `<div class="content-tags">${tags}</div>` : ''}
-    <p class="content-description">${item.descriptionShort || ''}</p>
-</div>`;
+    // Handle based on content type
+    if (item.type === 'video') {
+        // Show video with link
+        await showVideoContent(item, coverUrl, duration, points, category);
+    } else if (item.type === 'audio' || item.type === 'podcast') {
+        // Show audio with link
+        await showAudioContent(item, coverUrl, duration, points, category);
+    } else {
+        // Article - show the full text
+        await showArticleContent(item, coverUrl, category);
+    }
+}
 
-    await botMessage(detailHtml);
+async function showVideoContent(item, coverUrl, duration, points, category) {
+    // Build video URL - check for various URL fields in the CMS data
+    const videoUrl = item.videoUrl || item.url || item.externalUrl || `https://cms.strove.ai/content/${item.slug}`;
 
-    // If it's a video with points, offer to "start" it
-    const buttons = [];
-    if (item.type === 'video' && item.points?.earnable) {
-        buttons.push({ label: '▶️ Start & Earn Points', action: 'content_start', value: documentId, type: 'primary' });
-    } else if (item.type === 'article') {
-        buttons.push({ label: '📖 Read Article', action: 'content_read', value: documentId, type: 'primary' });
+    let videoHtml = `🎬 <strong>${item.title}</strong>\n\n`;
+
+    if (coverUrl) {
+        videoHtml += `<div class="video-preview">
+<img src="${coverUrl}" alt="${item.title}" class="content-cover">
+</div>\n\n`;
+    }
+
+    videoHtml += `<div class="content-meta-line">${[category, duration, points].filter(Boolean).join(' • ')}</div>\n\n`;
+
+    if (item.descriptionShort) {
+        videoHtml += `${item.descriptionShort}\n\n`;
+    }
+
+    videoHtml += `<a href="${videoUrl}" target="_blank" class="content-link video-link">▶️ Watch Video</a>`;
+
+    await botMessage(videoHtml);
+
+    const buttons = [
+        { label: '✅ Mark Complete', action: 'content_complete', value: item.documentId, type: 'primary' }
+    ];
+
+    if (item.points?.earnable) {
+        buttons[0].label = `✅ Complete & Earn ${item.points.value} pts`;
     }
 
     buttons.push(
-        { label: '❤️ Like', action: 'content_like', value: documentId },
-        { label: '← Back', action: 'menu_content' },
+        { label: '❤️ Like', action: 'content_like', value: item.documentId },
+        { label: '📚 More Content', action: 'menu_content' },
         { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     );
 
     setButtons(buttons);
 }
 
-async function startContent(documentId) {
-    const content = await fetchContentLibrary();
-    const item = content.find(c => c.documentId === documentId);
+async function showAudioContent(item, coverUrl, duration, points, category) {
+    // Build audio URL
+    const audioUrl = item.audioUrl || item.url || item.externalUrl || `https://cms.strove.ai/content/${item.slug}`;
 
-    if (!item) return;
+    let audioHtml = `🎧 <strong>${item.title}</strong>\n\n`;
 
-    if (item.type === 'video') {
-        await botMessage(`▶️ <strong>Starting: ${item.title}</strong>\n\nFollow along with the video. When you're done, tap "Complete" to earn your points!`);
-
-        // Simulate video player placeholder
-        await delay(500);
-        await botMessage(`<div class="video-placeholder">
-            <div class="video-icon">▶️</div>
-            <div class="video-duration">${item.duration?.label || 'Video'}</div>
-        </div>`);
-
-        setButtons([
-            { label: '✅ Complete & Earn Points', action: 'content_complete', value: documentId, type: 'primary' },
-            { label: '← Back', action: 'content_view', value: documentId }
-        ]);
+    if (coverUrl) {
+        audioHtml += `<div class="audio-preview">
+<img src="${coverUrl}" alt="${item.title}" class="content-cover audio-cover">
+</div>\n\n`;
     }
+
+    audioHtml += `<div class="content-meta-line">${[category, duration, points].filter(Boolean).join(' • ')}</div>\n\n`;
+
+    if (item.descriptionShort) {
+        audioHtml += `${item.descriptionShort}\n\n`;
+    }
+
+    audioHtml += `<a href="${audioUrl}" target="_blank" class="content-link audio-link">🎧 Listen Now</a>`;
+
+    await botMessage(audioHtml);
+
+    const buttons = [
+        { label: '✅ Mark Complete', action: 'content_complete', value: item.documentId, type: 'primary' }
+    ];
+
+    if (item.points?.earnable) {
+        buttons[0].label = `✅ Complete & Earn ${item.points.value} pts`;
+    }
+
+    buttons.push(
+        { label: '❤️ Like', action: 'content_like', value: item.documentId },
+        { label: '📚 More Content', action: 'menu_content' },
+        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+    );
+
+    setButtons(buttons);
 }
 
-async function readArticle(documentId) {
-    const content = await fetchContentLibrary();
-    const item = content.find(c => c.documentId === documentId);
+async function showArticleContent(item, coverUrl, category) {
+    // Get full article content
+    const articleText = item.richText || item.descriptionLong || item.descriptionShort || '';
 
-    if (!item) return;
+    let articleHtml = `📖 <strong>${item.title}</strong>\n\n`;
 
-    // Show rich text content if available, otherwise description
-    const articleContent = item.richText || item.descriptionLong || item.descriptionShort || 'No content available.';
+    if (category) {
+        articleHtml += `<div class="content-category-tag">${category}</div>\n\n`;
+    }
 
-    await botMessage(`📖 <strong>${item.title}</strong>\n\n<div class="article-content">${articleContent}</div>`);
+    if (coverUrl) {
+        articleHtml += `<img src="${coverUrl}" alt="${item.title}" class="article-image">\n\n`;
+    }
+
+    // Show the full article content
+    if (articleText) {
+        articleHtml += `<div class="article-body">${articleText}</div>`;
+    } else {
+        articleHtml += `<p><em>No content available for this article.</em></p>`;
+    }
+
+    await botMessage(articleHtml);
+
+    // Show tags if available
+    if (item.tags && item.tags.length > 0) {
+        const tagsList = item.tags.map(t => t.name).join(' • ');
+        await botMessage(`<div class="article-tags">🏷️ ${tagsList}</div>`);
+    }
 
     setButtons([
-        { label: '❤️ Like', action: 'content_like', value: documentId },
-        { label: '← Back to Library', action: 'menu_content' },
+        { label: '❤️ Like', action: 'content_like', value: item.documentId },
+        { label: '📚 More Content', action: 'menu_content', type: 'primary' },
         { label: 'Menu', action: 'goto_menu', type: 'secondary' }
     ]);
 }
+
+// Content is now opened directly via openContent() function
 
 async function completeContent(documentId) {
     const content = await fetchContentLibrary();
@@ -2301,13 +2371,8 @@ function handleContentAction(action, value) {
             showContentByCategory(value);
             break;
         case 'content_view':
+        case 'content_open':
             showContentDetail(value);
-            break;
-        case 'content_start':
-            startContent(value);
-            break;
-        case 'content_read':
-            readArticle(value);
             break;
         case 'content_complete':
             completeContent(value);
@@ -2690,6 +2755,20 @@ function handleTextInput(input) {
             // Search mode - user typed a search query
             if (AppState.flowStep === 1) {
                 searchContent(trimmed);
+            }
+            // Number selection mode - user typed a number to select content
+            else if (AppState.flowStep === 2) {
+                const num = parseInt(trimmed);
+                if (num >= 1 && num <= 8 && AppState.tempData.contentItems) {
+                    const items = AppState.tempData.contentItems;
+                    if (num <= items.length) {
+                        const selectedItem = items[num - 1];
+                        openContent(selectedItem);
+                    }
+                } else {
+                    // Try as search
+                    searchContent(trimmed);
+                }
             }
             break;
 
