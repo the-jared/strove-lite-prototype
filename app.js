@@ -358,10 +358,10 @@ async function handleOnboardingStep(action, value) {
         case 0: // Agreement
             if (action === 'onboard_agree') {
                 AppState.flowStep = 1;
-                await botMessage("First, choose your language.");
+                await botMessage("Choose your language:\nKhetha ulimi lwakho:\nKies jou taal:");
                 setButtons([
                     { label: 'English', action: 'set_language', value: 'English', type: 'primary' },
-                    { label: 'isiZulu', action: 'set_language', value: 'isiZulu' },
+                    { label: 'IsiZulu', action: 'set_language', value: 'isiZulu' },
                     { label: 'Afrikaans', action: 'set_language', value: 'Afrikaans' }
                 ]);
             } else {
@@ -2598,10 +2598,10 @@ async function handleSettingsStep(action, value) {
             break;
 
         case 'settings_language':
-            await botMessage("Choose your language.");
+            await botMessage("Choose your language:\nKhetha ulimi lwakho:\nKies jou taal:");
             setButtons([
                 { label: 'English', action: 'set_language', value: 'English', type: 'primary' },
-                { label: 'isiZulu', action: 'set_language', value: 'isiZulu' },
+                { label: 'IsiZulu', action: 'set_language', value: 'isiZulu' },
                 { label: 'Afrikaans', action: 'set_language', value: 'Afrikaans' }
             ]);
             break;
