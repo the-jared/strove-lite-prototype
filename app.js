@@ -128,6 +128,24 @@ const FLOWS = {
 
 // Content Library API
 const CONTENT_API_URL = 'https://cms.strove.ai/api/library-contents';
+const CONTENT_API_BASE = 'https://lively-crystal-f13b3a6e8c.strapiapp.com/api/library-contents';
+const CONTENT_WHITELABEL_ID = '0ba3f986-b35d-47ac-9bd4-0fcdca675461';
+
+// Get Content API token from config (injected by GitHub Actions) or fallback
+function getContentApiToken() {
+    if (typeof window.STROVE_CONFIG !== 'undefined' && window.STROVE_CONFIG.CONTENT_API_TOKEN) {
+        return window.STROVE_CONFIG.CONTENT_API_TOKEN;
+    }
+    return '';
+}
+
+function getContentApiHeaders() {
+    const token = getContentApiToken();
+    return {
+        'whitelabel-id': CONTENT_WHITELABEL_ID,
+        'Authorization': token ? `Bearer ${token}` : ''
+    };
+}
 
 // ==========================================
 // DOM ELEMENTS
@@ -2001,6 +2019,7 @@ async function processAIChat(userMessage) {
 
 let contentCache = null;
 let contentCategories = [];
+let contentDetailCache = new Map();
 
 async function fetchContentLibrary() {
     if (contentCache) return contentCache;
@@ -2024,6 +2043,43 @@ async function fetchContentLibrary() {
     } catch (error) {
         console.error('Content Library Error:', error);
         return [];
+    }
+}
+
+// Fetch individual content item with full details using authenticated API
+async function fetchContentDetail(documentId) {
+    // Check cache first
+    if (contentDetailCache.has(documentId)) {
+        return contentDetailCache.get(documentId);
+    }
+
+    const token = getContentApiToken();
+    if (!token) {
+        console.log('No Content API token configured, using list data');
+        return null;
+    }
+
+    try {
+        const response = await fetch(`${CONTENT_API_BASE}/${documentId}`, {
+            method: 'GET',
+            headers: getContentApiHeaders()
+        });
+
+        if (!response.ok) {
+            console.error('Content detail fetch failed:', response.status);
+            return null;
+        }
+
+        const data = await response.json();
+        const item = data.data || data;
+
+        // Cache the result
+        contentDetailCache.set(documentId, item);
+
+        return item;
+    } catch (error) {
+        console.error('Content Detail Error:', error);
+        return null;
     }
 }
 
@@ -2170,22 +2226,30 @@ async function showContentDetail(documentId) {
 }
 
 async function openContent(item) {
-    const typeIcon = getContentTypeIcon(item.type);
-    const coverUrl = item.cover?.formats?.medium?.url || item.cover?.url || '';
-    const duration = item.duration?.label ? `⏱ ${item.duration.label}` : '';
-    const points = item.points?.value ? `🪙 ${item.points.value} points` : '';
-    const category = item.category?.name || '';
+    // Fetch full content details from authenticated API
+    await botMessage("Loading content...");
+
+    const fullItem = await fetchContentDetail(item.documentId);
+
+    // Use full item if available, otherwise fall back to list item
+    const contentItem = fullItem || item;
+
+    const typeIcon = getContentTypeIcon(contentItem.type);
+    const coverUrl = contentItem.cover?.formats?.medium?.url || contentItem.cover?.url || '';
+    const duration = contentItem.duration?.label ? `⏱ ${contentItem.duration.label}` : '';
+    const points = contentItem.points?.value ? `🪙 ${contentItem.points.value} points` : '';
+    const category = contentItem.category?.name || '';
 
     // Handle based on content type
-    if (item.type === 'video') {
+    if (contentItem.type === 'video') {
         // Show video with link
-        await showVideoContent(item, coverUrl, duration, points, category);
-    } else if (item.type === 'audio' || item.type === 'podcast') {
+        await showVideoContent(contentItem, coverUrl, duration, points, category);
+    } else if (contentItem.type === 'audio' || contentItem.type === 'podcast') {
         // Show audio with link
-        await showAudioContent(item, coverUrl, duration, points, category);
+        await showAudioContent(contentItem, coverUrl, duration, points, category);
     } else {
         // Article - show the full text
-        await showArticleContent(item, coverUrl, category);
+        await showArticleContent(contentItem, coverUrl, category);
     }
 }
 
