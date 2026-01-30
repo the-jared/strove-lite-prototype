@@ -1,6 +1,21 @@
 // Strove Lite WhatsApp Prototype - State Machine & Conversation Flow
 
 // ==========================================
+// OPENAI CONFIGURATION
+// ==========================================
+
+// API key is loaded from URL parameter or localStorage for demo purposes
+// In production, this would be handled server-side
+let OPENAI_API_KEY = localStorage.getItem('strove_openai_key') || '';
+
+// Check URL params for API key (for easy demo sharing)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('apikey')) {
+    OPENAI_API_KEY = urlParams.get('apikey');
+    localStorage.setItem('strove_openai_key', OPENAI_API_KEY);
+}
+
+// ==========================================
 // STATE MANAGEMENT
 // ==========================================
 
@@ -33,18 +48,44 @@ const AppState = {
     challengeProgress: 0,
     challengeTarget: 150, // minutes
 
-    // Activity data (simulated)
+    // Activity data (simulated - expanded)
     weeklyActivity: {
         activeMinutes: 85,
         steps: 32450,
         distance: 24.5,
-        avgSleep: '6h 45m'
+        avgSleep: '6h 45m',
+        sleepQuality: 72,
+        calories: 1850,
+        workouts: [
+            { day: 'Mon', type: 'Walk', duration: 25, intensity: 'Light' },
+            { day: 'Wed', type: 'Run', duration: 30, intensity: 'Moderate' },
+            { day: 'Fri', type: 'Strength', duration: 30, intensity: 'Hard' }
+        ],
+        dailySteps: [4200, 6800, 5100, 8200, 4500, 2100, 1550],
+        heartRateAvg: 68,
+        restingHR: 62
     },
+
+    // Meal tracking data
+    mealHistory: [
+        { date: 'Today', meal: 'Breakfast', score: 7, notes: 'Oatmeal with berries', calories: 350 },
+        { date: 'Today', meal: 'Lunch', score: 6, notes: 'Chicken salad', calories: 520 },
+        { date: 'Yesterday', meal: 'Dinner', score: 5, notes: 'Pizza', calories: 850 },
+        { date: 'Yesterday', meal: 'Lunch', score: 8, notes: 'Grilled fish with vegetables', calories: 480 }
+    ],
+
+    // Check-in history
+    checkInHistory: [
+        { date: 'Today', sleep: 3, stress: 2, active: 'yes', diet: 2 },
+        { date: 'Yesterday', sleep: 4, stress: 3, active: 'yes', diet: 3 },
+        { date: '2 days ago', sleep: 2, stress: 4, active: 'no', diet: 2 }
+    ],
 
     // Conversation state
     currentFlow: 'initial',
     flowStep: 0,
     tempData: {},
+    conversationHistory: [],
 
     // Settings
     reminderFrequency: 'daily',
@@ -71,7 +112,8 @@ const FLOWS = {
     SETTINGS: 'settings',
     HELP: 'help',
     EXTENDED_PROFILE: 'extendedProfile',
-    FACE_SCAN: 'faceScan'
+    FACE_SCAN: 'faceScan',
+    AI_CHAT: 'aiChat'
 };
 
 // ==========================================
@@ -497,6 +539,7 @@ async function showMainMenu() {
 
     setButtons([
         { label: '✅ Check-in', action: 'menu_checkin', type: 'primary' },
+        { label: '🤖 AI Insights', action: 'menu_ai' },
         { label: '📊 Health summary', action: 'menu_summary' },
         { label: '🫀 Face scan', action: 'menu_facescan' },
         { label: '🏆 Challenges', action: 'menu_challenges' },
@@ -696,12 +739,61 @@ async function showHealthSummary() {
     }
 
     const data = AppState.weeklyActivity;
-    const change = Math.random() > 0.5 ? '↑' : '↓';
-    const changePhrase = change === '↑' ? 'Great progress!' : 'Keep pushing!';
+    const meals = AppState.mealHistory;
+    const avgMealScore = meals.length > 0
+        ? (meals.reduce((sum, m) => sum + m.score, 0) / meals.length).toFixed(1)
+        : 'N/A';
 
-    await botMessage(`📊 Your health summary — this week\n\n• Active minutes: ${data.activeMinutes} min\n• Steps: ${data.steps.toLocaleString()}\n• Distance: ${data.distance} km\n• Average sleep: ${data.avgSleep}\n\nCompared to last week: ${change} ${changePhrase}\n\nNext focus: Aim for 100 active minutes this week.`);
+    // Calculate step trend
+    const recentSteps = data.dailySteps.slice(-3);
+    const earlierSteps = data.dailySteps.slice(0, 3);
+    const recentAvg = recentSteps.reduce((a, b) => a + b, 0) / recentSteps.length;
+    const earlierAvg = earlierSteps.reduce((a, b) => a + b, 0) / earlierSteps.length;
+    const stepTrend = recentAvg > earlierAvg ? '↑' : recentAvg < earlierAvg ? '↓' : '→';
+
+    await botMessage(`📊 <strong>Your Weekly Health Summary</strong>
+
+<div class="summary-card">
+<div class="summary-section">
+<strong>🏃 Activity</strong>
+• Active minutes: <strong>${data.activeMinutes} min</strong>
+• Total steps: <strong>${data.steps.toLocaleString()}</strong> ${stepTrend}
+• Distance: <strong>${data.distance} km</strong>
+• Workouts: <strong>${data.workouts.length}</strong> sessions
+</div>
+
+<div class="summary-section">
+<strong>❤️ Vitals</strong>
+• Avg heart rate: <strong>${data.heartRateAvg} bpm</strong>
+• Resting HR: <strong>${data.restingHR} bpm</strong>
+• Calories burned: ~<strong>${data.calories}/day</strong>
+</div>
+
+<div class="summary-section">
+<strong>😴 Sleep</strong>
+• Average: <strong>${data.avgSleep}</strong>
+• Quality score: <strong>${data.sleepQuality}/100</strong>
+</div>
+
+<div class="summary-section">
+<strong>🍽 Nutrition</strong>
+• Meals logged: <strong>${meals.length}</strong>
+• Average score: <strong>${avgMealScore}/10</strong>
+</div>
+</div>
+
+🔥 <strong>Streak:</strong> ${AppState.streak} days`);
+
+    await delay(500);
+
+    // Show workout breakdown
+    if (data.workouts.length > 0) {
+        const workoutList = data.workouts.map(w => `• ${w.day}: ${w.type} (${w.duration}min)`).join('\n');
+        await botMessage(`💪 <strong>This Week's Workouts</strong>\n\n${workoutList}`);
+    }
 
     setButtons([
+        { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
         { label: 'Monthly summary', action: 'monthly_summary' },
         { label: 'MENU', action: 'goto_menu', type: 'secondary' }
     ]);
@@ -710,9 +802,34 @@ async function showHealthSummary() {
 async function showMonthlySummary() {
     const data = AppState.weeklyActivity;
 
-    await botMessage(`📊 Your health summary — last 30 days\n\n• Active minutes: ${data.activeMinutes * 4} min\n• Steps: ${(data.steps * 4).toLocaleString()}\n• Distance: ${(data.distance * 4).toFixed(1)} km\n• Average sleep: ${data.avgSleep}\n\nKeep going: consistency matters more than intensity.`);
+    await botMessage(`📊 <strong>Your Monthly Health Summary</strong>
+
+<div class="summary-card">
+<div class="summary-section">
+<strong>🏃 Activity (30 days)</strong>
+• Active minutes: <strong>${data.activeMinutes * 4} min</strong>
+• Total steps: <strong>${(data.steps * 4).toLocaleString()}</strong>
+• Distance: <strong>${(data.distance * 4).toFixed(1)} km</strong>
+• Avg daily steps: <strong>${Math.round(data.steps * 4 / 30).toLocaleString()}</strong>
+</div>
+
+<div class="summary-section">
+<strong>😴 Sleep</strong>
+• Average: <strong>${data.avgSleep}</strong>
+• Quality trend: <strong>Stable</strong>
+</div>
+
+<div class="summary-section">
+<strong>🎯 Progress</strong>
+• Check-in streak: <strong>${AppState.streak} days</strong>
+• Coins earned: <strong>${AppState.coins} 🪙</strong>
+</div>
+</div>
+
+💡 <strong>Tip:</strong> Consistency matters more than intensity. Keep showing up!`);
 
     setButtons([
+        { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
         { label: 'Weekly summary', action: 'menu_summary' },
         { label: 'MENU', action: 'goto_menu', type: 'secondary' }
     ]);
@@ -1540,6 +1657,261 @@ ${results.bpWarning || results.bmiWarning ?
 }
 
 // ==========================================
+// AI INSIGHTS & CHAT
+// ==========================================
+
+async function startAIChat() {
+    AppState.currentFlow = FLOWS.AI_CHAT;
+    AppState.conversationHistory = [];
+    updateDebugPanel();
+
+    const greeting = getPersonalizedGreeting();
+    await botMessage(`🤖 <strong>Strove AI Assistant</strong>\n\n${greeting}\n\nI can help you with:\n• Understanding your health data\n• Personalized wellness tips\n• Answering questions about your progress\n• Motivation and goal setting\n\nJust type your question or pick a topic below.`);
+
+    setButtons([
+        { label: '📊 Analyze my week', action: 'ai_analyze_week', type: 'primary' },
+        { label: '🍽 Nutrition tips', action: 'ai_nutrition' },
+        { label: '😴 Sleep insights', action: 'ai_sleep' },
+        { label: '💪 Motivation', action: 'ai_motivation' },
+        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+function getPersonalizedGreeting() {
+    const hour = new Date().getHours();
+    const name = AppState.user.firstName || 'there';
+
+    if (hour < 12) {
+        return `Good morning, ${name}! ☀️`;
+    } else if (hour < 17) {
+        return `Good afternoon, ${name}! 👋`;
+    } else {
+        return `Good evening, ${name}! 🌙`;
+    }
+}
+
+function buildHealthContext() {
+    const activity = AppState.weeklyActivity;
+    const meals = AppState.mealHistory;
+    const checkIns = AppState.checkInHistory;
+    const faceScan = AppState.faceScanResults;
+
+    let context = `
+USER PROFILE:
+- Name: ${AppState.user.firstName} ${AppState.user.surname}
+- Goals: ${AppState.user.goals.join(', ') || 'Not set'}
+- Height: ${AppState.user.height || 'Unknown'} cm
+- Weight: ${AppState.user.weight || 'Unknown'} kg
+- Activity level: ${AppState.user.pavsdays || 'Unknown'} days/week
+
+WEEKLY ACTIVITY DATA:
+- Active minutes: ${activity.activeMinutes} min
+- Steps this week: ${activity.steps.toLocaleString()}
+- Distance: ${activity.distance} km
+- Average sleep: ${activity.avgSleep}
+- Sleep quality score: ${activity.sleepQuality}/100
+- Daily calories burned: ~${activity.calories}
+- Workouts: ${activity.workouts.map(w => `${w.day}: ${w.type} (${w.duration}min, ${w.intensity})`).join(', ')}
+- Daily steps pattern: ${activity.dailySteps.join(', ')} (Mon-Sun)
+- Average heart rate: ${activity.heartRateAvg} bpm
+- Resting heart rate: ${activity.restingHR} bpm
+- Current streak: ${AppState.streak} days
+- Challenge progress: ${AppState.challengeProgress}/${AppState.challengeTarget} minutes
+
+RECENT MEALS:
+${meals.map(m => `- ${m.date} ${m.meal}: ${m.notes} (Score: ${m.score}/10, ~${m.calories} cal)`).join('\n')}
+
+RECENT CHECK-INS:
+${checkIns.map(c => `- ${c.date}: Sleep ${c.sleep}/5, Stress ${c.stress}/5, Active: ${c.active}, Diet: ${c.diet}/3`).join('\n')}
+`;
+
+    if (faceScan) {
+        context += `
+LATEST FACE SCAN RESULTS:
+- Cardiometabolic Score: ${faceScan.cmsScore}/100
+- Blood Pressure: ${faceScan.systolic}/${faceScan.diastolic} mmHg (${faceScan.bpStatus})
+- Heart Rate: ${faceScan.heartRate} bpm
+- BMI: ${faceScan.bmi} (${faceScan.bmiStatus})
+- SpO2: ${faceScan.spo2}%
+- 10-Year CVD Risk: ${faceScan.cvdRisk}%
+`;
+    }
+
+    return context;
+}
+
+async function getAIResponse(userMessage, systemPrompt = null) {
+    // Check if API key is configured
+    if (!OPENAI_API_KEY) {
+        return generateFallbackResponse(userMessage);
+    }
+
+    const healthContext = buildHealthContext();
+
+    const defaultSystemPrompt = `You are Strove's friendly AI health assistant. You help users understand their health data, provide personalized wellness tips, and motivate them to build healthy habits.
+
+IMPORTANT GUIDELINES:
+- Be warm, supportive, and encouraging
+- Keep responses concise (2-4 short paragraphs max)
+- Use emojis sparingly but naturally
+- Reference the user's actual data when relevant
+- Give specific, actionable advice
+- Never diagnose medical conditions - suggest seeing a healthcare provider for concerns
+- Focus on positive progress and small wins
+- Be conversational, not clinical
+
+USER'S HEALTH DATA:
+${healthContext}`;
+
+    const messages = [
+        { role: 'system', content: systemPrompt || defaultSystemPrompt },
+        ...AppState.conversationHistory.slice(-6), // Keep last 6 messages for context
+        { role: 'user', content: userMessage }
+    ];
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: messages,
+                max_tokens: 500,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('API request failed');
+        }
+
+        const data = await response.json();
+        const aiMessage = data.choices[0].message.content;
+
+        // Store conversation history
+        AppState.conversationHistory.push({ role: 'user', content: userMessage });
+        AppState.conversationHistory.push({ role: 'assistant', content: aiMessage });
+
+        return aiMessage;
+    } catch (error) {
+        console.error('AI API Error:', error);
+        return generateFallbackResponse(userMessage);
+    }
+}
+
+// Smart fallback responses when API is unavailable
+function generateFallbackResponse(userMessage) {
+    const lower = userMessage.toLowerCase();
+    const data = AppState.weeklyActivity;
+    const name = AppState.user.firstName || 'there';
+
+    // Analyze week request
+    if (lower.includes('analyze') || lower.includes('week') || lower.includes('summary')) {
+        return `Hey ${name}! 📊 Looking at your week:\n\n` +
+            `You've logged ${data.activeMinutes} active minutes and ${data.steps.toLocaleString()} steps. ` +
+            `Your sleep has been averaging ${data.avgSleep} with a quality score of ${data.sleepQuality}/100.\n\n` +
+            `${data.activeMinutes >= 100 ? '🎉 Great job staying active!' : '💪 Try to add a bit more movement this week.'} ` +
+            `${data.sleepQuality >= 70 ? 'Your sleep quality is good!' : 'Consider improving your sleep routine.'}\n\n` +
+            `Keep going - consistency is key! 🔥`;
+    }
+
+    // Nutrition request
+    if (lower.includes('nutrition') || lower.includes('meal') || lower.includes('food') || lower.includes('eat')) {
+        const meals = AppState.mealHistory;
+        const avgScore = meals.length > 0 ? (meals.reduce((s, m) => s + m.score, 0) / meals.length).toFixed(1) : 'N/A';
+        return `🥗 Based on your recent meals (avg score: ${avgScore}/10):\n\n` +
+            `• Try to include more vegetables with each meal\n` +
+            `• Stay hydrated - aim for 8 glasses of water daily\n` +
+            `• Balance your plate: 1/2 veggies, 1/4 protein, 1/4 carbs\n\n` +
+            `Small changes add up! Keep logging your meals to track progress. 🍎`;
+    }
+
+    // Sleep request
+    if (lower.includes('sleep') || lower.includes('tired') || lower.includes('rest')) {
+        return `😴 Your sleep insights:\n\n` +
+            `You're averaging ${data.avgSleep} with a quality score of ${data.sleepQuality}/100.\n\n` +
+            `Tips for better sleep:\n` +
+            `• Aim for 7-9 hours each night\n` +
+            `• Keep a consistent sleep schedule\n` +
+            `• Avoid screens 1 hour before bed\n` +
+            `• Keep your room cool and dark\n\n` +
+            `Good sleep is the foundation of good health! 🌙`;
+    }
+
+    // Motivation request
+    if (lower.includes('motivat') || lower.includes('encourage') || lower.includes('help')) {
+        return `💪 Hey ${name}, you've got this!\n\n` +
+            `Look at what you've already achieved:\n` +
+            `• ${AppState.streak} day check-in streak 🔥\n` +
+            `• ${data.steps.toLocaleString()} steps this week\n` +
+            `• ${AppState.coins} coins earned 🪙\n\n` +
+            `Every small step counts. You're building habits that will serve you for life. ` +
+            `Don't compare your journey to others - focus on being better than yesterday!\n\n` +
+            `Keep showing up. You've got this! 🌟`;
+    }
+
+    // Default response
+    return `Thanks for your question, ${name}! 💬\n\n` +
+        `Here's a quick health tip: ${getRandomHealthTip()}\n\n` +
+        `Try the quick action buttons below or type MENU for more options!`;
+}
+
+function getRandomHealthTip() {
+    const tips = [
+        "Small consistent actions beat big sporadic efforts. Try adding just 5 more minutes of movement today!",
+        "Hydration is key - try drinking a glass of water right now! 💧",
+        "Take a 2-minute stretch break. Your body will thank you!",
+        "Deep breathing for 60 seconds can reduce stress significantly.",
+        "A 10-minute walk after meals can help with digestion and blood sugar.",
+        "Try to get some natural light within 30 minutes of waking up.",
+        "Eating slowly and mindfully can help you feel more satisfied with less food."
+    ];
+    return tips[Math.floor(Math.random() * tips.length)];
+}
+
+async function handleAIChatAction(action) {
+    let prompt;
+
+    switch (action) {
+        case 'ai_analyze_week':
+            prompt = "Please analyze my week's health data. What patterns do you see? What am I doing well and what could I improve? Be specific about the data.";
+            break;
+        case 'ai_nutrition':
+            prompt = "Based on my recent meals and health goals, give me some personalized nutrition tips. What should I focus on?";
+            break;
+        case 'ai_sleep':
+            prompt = "Look at my sleep data and check-ins. How is my sleep quality? What can I do to improve it?";
+            break;
+        case 'ai_motivation':
+            prompt = "I need some motivation! Look at my progress and give me an encouraging message. Remind me of my wins this week.";
+            break;
+        default:
+            return;
+    }
+
+    await processAIChat(prompt);
+}
+
+async function processAIChat(userMessage) {
+    showTypingIndicator();
+
+    const response = await getAIResponse(userMessage);
+
+    hideTypingIndicator();
+    await botMessage(response);
+
+    setButtons([
+        { label: '💬 Ask more', action: 'ai_continue', type: 'primary' },
+        { label: '📊 Analyze my week', action: 'ai_analyze_week' },
+        { label: '💪 Motivation', action: 'ai_motivation' },
+        { label: 'MENU', action: 'goto_menu', type: 'secondary' }
+    ]);
+}
+
+// ==========================================
 // SETTINGS
 // ==========================================
 
@@ -1768,6 +2140,11 @@ function handleButtonClick(action, value) {
         case FLOWS.FACE_SCAN:
             handleFaceScanStep(action, value);
             break;
+        case FLOWS.AI_CHAT:
+            if (action.startsWith('ai_')) {
+                handleAIChatAction(action);
+            }
+            break;
         case FLOWS.CHALLENGES:
             if (action === 'join_challenge') joinChallenge();
             else if (action === 'challenge_progress') showChallengeProgress();
@@ -1796,6 +2173,9 @@ function handleMenuAction(action) {
     switch (action) {
         case 'checkin':
             startCheckIn();
+            break;
+        case 'ai':
+            startAIChat();
             break;
         case 'summary':
             showHealthSummary();
@@ -1872,6 +2252,11 @@ function handleTextInput(input) {
             }
             break;
 
+        case FLOWS.AI_CHAT:
+            // Freeform conversation with AI
+            processAIChat(trimmed);
+            break;
+
         case FLOWS.MEAL_SCAN:
             handleMealScan(trimmed);
             break;
@@ -1881,7 +2266,7 @@ function handleTextInput(input) {
             break;
 
         case FLOWS.MAIN_MENU:
-            // Try to match menu items
+            // Try to match menu items or start AI chat for questions
             const lower = trimmed.toLowerCase();
             if (lower.includes('check') || lower === 'checkin') {
                 startCheckIn();
@@ -1899,21 +2284,19 @@ function handleTextInput(input) {
                 showMealScan();
             } else if (lower.includes('setting')) {
                 showSettings();
+            } else if (lower.includes('ai') || lower.includes('insight') || lower.includes('chat')) {
+                startAIChat();
             } else {
-                botMessage("Sorry — I didn't understand that.\n\nType MENU to see options, or type HELP for support.");
-                setButtons([
-                    { label: 'MENU', action: 'goto_menu' },
-                    { label: 'HELP', action: 'menu_help' }
-                ]);
+                // Route to AI for natural conversation
+                AppState.currentFlow = FLOWS.AI_CHAT;
+                processAIChat(trimmed);
             }
             break;
 
         default:
-            botMessage("Sorry — I didn't understand that.\n\nType MENU to see options, or type HELP for support.");
-            setButtons([
-                { label: 'MENU', action: 'goto_menu' },
-                { label: 'HELP', action: 'menu_help' }
-            ]);
+            // Route unknown input to AI for natural conversation
+            AppState.currentFlow = FLOWS.AI_CHAT;
+            processAIChat(trimmed);
     }
 }
 

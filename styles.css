@@ -736,3 +736,53 @@ body {
     color: #06cf9c !important;
     text-decoration: none;
 }
+
+/* ==========================================
+   SUMMARY CARDS
+   ========================================== */
+
+.summary-card {
+    background-color: #111b21;
+    border-radius: 12px;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+.summary-section {
+    padding: 10px 0;
+    border-bottom: 1px solid #2a3942;
+}
+
+.summary-section:last-child {
+    border-bottom: none;
+}
+
+.summary-section strong:first-child {
+    color: #00a884;
+    display: block;
+    margin-bottom: 6px;
+}
+
+/* ==========================================
+   AI CHAT STYLES
+   ========================================== */
+
+.ai-response {
+    background: linear-gradient(135deg, rgba(0, 168, 132, 0.1) 0%, rgba(0, 168, 132, 0.05) 100%);
+    border-left: 3px solid #00a884;
+    padding: 12px;
+    border-radius: 0 8px 8px 0;
+    margin: 4px 0;
+}
+
+.ai-thinking {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #8696a0;
+    font-style: italic;
+}
+
+.ai-thinking::before {
+    content: '🤖';
+}
