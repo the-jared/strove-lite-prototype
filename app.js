@@ -247,7 +247,7 @@ async function startOnboarding() {
 
 <strong>Welcome to Strove</strong> 👋
 
-We help you build healthy habits at work through daily check-ins, activity tracking, challenges, and AI-powered health insights.
+We help you build healthy habits through daily check-ins, activity tracking, challenges, and AI-powered health insights.
 
 <div class="welcome-links">
 🌐 <a href="https://www.strove.ai/" target="_blank">www.strove.ai</a>
@@ -286,7 +286,7 @@ async function handleOnboardingStep(action, value) {
                 addMessage(value, true);
                 AppState.user.language = value;
                 AppState.flowStep = 2;
-                await botMessage("Let's link you to your Strove account.\n\nPlease enter your work email or employee ID.");
+                await botMessage("Let's link you to your Strove account.\n\nPlease enter your email or member ID.");
                 clearButtons();
             }
             break;
@@ -1709,7 +1709,7 @@ async function handleHelpStep(action, value) {
             break;
 
         case 'help_privacy':
-            await botMessage("We only use your data to provide Strove services and reporting to your employer in line with our agreements.\n\nYou can:\n• opt out any time (type STOP)\n• request data access or deletion via a secure form\n\n<a href='#'>Request data access/deletion</a>\n\n<em>(Demo only - link simulated)</em>");
+            await botMessage("We only use your data to provide Strove services in line with our privacy policy.\n\nYou can:\n• opt out any time (type STOP)\n• request data access or deletion via a secure form\n\n<a href='#'>Request data access/deletion</a>\n\n<em>(Demo only - link simulated)</em>");
             setButtons([
                 { label: 'MENU', action: 'goto_menu', type: 'secondary' }
             ]);
