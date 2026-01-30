@@ -2238,14 +2238,12 @@ async function openContent(item) {
     if (contentItem.type === 'video' || contentItem.type === 'audio' || contentItem.type === 'podcast') {
         console.log('Content item fields:', {
             type: contentItem.type,
+            body: contentItem.body,
             actions: contentItem.actions,
             url: contentItem.url,
             videoUrl: contentItem.videoUrl,
             audioUrl: contentItem.audioUrl,
-            externalUrl: contentItem.externalUrl,
-            media: contentItem.media,
-            video: contentItem.video,
-            audio: contentItem.audio
+            externalUrl: contentItem.externalUrl
         });
     }
 
@@ -2269,14 +2267,22 @@ async function openContent(item) {
 }
 
 async function showVideoContent(item, coverUrl, duration, points, category) {
-    // Build video URL - check actions array first, then other URL fields
+    // Build video URL - check body array for action_url (primary source from CMS)
     let videoUrl = null;
 
-    // Check actions array for video URL (primary source from CMS)
-    if (item.actions && Array.isArray(item.actions)) {
-        const videoAction = item.actions.find(a => a.url || a.link);
+    // Check body array for action_url (this is where Strapi stores video URLs)
+    if (item.body && Array.isArray(item.body)) {
+        const videoAction = item.body.find(b => b.action_url || b.action_type === 'play-video');
         if (videoAction) {
-            videoUrl = videoAction.url || videoAction.link;
+            videoUrl = videoAction.action_url;
+        }
+    }
+
+    // Also check actions array as backup
+    if (!videoUrl && item.actions && Array.isArray(item.actions)) {
+        const videoAction = item.actions.find(a => a.url || a.link || a.action_url);
+        if (videoAction) {
+            videoUrl = videoAction.action_url || videoAction.url || videoAction.link;
         }
     }
 
@@ -2326,14 +2332,22 @@ async function showVideoContent(item, coverUrl, duration, points, category) {
 }
 
 async function showAudioContent(item, coverUrl, duration, points, category) {
-    // Build audio URL - check actions array first, then other URL fields
+    // Build audio URL - check body array for action_url (primary source from CMS)
     let audioUrl = null;
 
-    // Check actions array for audio URL (primary source from CMS)
-    if (item.actions && Array.isArray(item.actions)) {
-        const audioAction = item.actions.find(a => a.url || a.link);
+    // Check body array for action_url (this is where Strapi stores audio URLs)
+    if (item.body && Array.isArray(item.body)) {
+        const audioAction = item.body.find(b => b.action_url || b.action_type === 'play-audio' || b.action_type === 'play-podcast');
         if (audioAction) {
-            audioUrl = audioAction.url || audioAction.link;
+            audioUrl = audioAction.action_url;
+        }
+    }
+
+    // Also check actions array as backup
+    if (!audioUrl && item.actions && Array.isArray(item.actions)) {
+        const audioAction = item.actions.find(a => a.url || a.link || a.action_url);
+        if (audioAction) {
+            audioUrl = audioAction.action_url || audioAction.url || audioAction.link;
         }
     }
 
