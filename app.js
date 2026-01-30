@@ -126,6 +126,317 @@ const FLOWS = {
     CONTENT_LIBRARY: 'contentLibrary'
 };
 
+// ==========================================
+// TRANSLATIONS
+// ==========================================
+
+const translations = {
+    English: {
+        // Menu items
+        menu_checkin: '✅ Check-in',
+        menu_ai: '🤖 AI Insights',
+        menu_content: '📚 Content Library',
+        menu_health: '📊 Health summary',
+        menu_facescan: '🫀 Face scan',
+        menu_challenges: '🏆 Challenges',
+        menu_score: '⭐ My Score',
+        menu_activity: '🏃 Log activity',
+        menu_coins: '🪙 Coins & rewards',
+        menu_meal: '🍽 Meal scan',
+        menu_settings: '⚙️ Settings',
+        menu_help: '❓ Help',
+        menu_back: 'Menu',
+
+        // Common actions
+        btn_continue: 'Continue',
+        btn_skip: 'Skip',
+        btn_done: 'Done',
+        btn_cancel: 'Cancel',
+        btn_yes: 'Yes',
+        btn_no: 'No',
+        btn_back: '← Back',
+
+        // Greetings
+        welcome_back: 'Welcome back, {name}! 👋',
+        what_to_do: 'What would you like to do today?',
+        hey_name: 'Hey {name}! What would you like to do?',
+
+        // Check-in
+        checkin_start: "Let's do your daily check-in! This helps us track your wellness journey.",
+        checkin_sleep: 'How did you sleep last night?',
+        checkin_stress: 'How are your stress levels today?',
+        checkin_active: 'Have you been active today?',
+        checkin_mood: 'How are you feeling right now?',
+        checkin_complete: '🎉 Check-in complete!',
+        checkin_coins: "You've earned {coins} coins for checking in today!",
+        checkin_streak: '🔥 {days}-day streak! Keep it up!',
+
+        // Sleep options
+        sleep_great: '😴 Great (7-9 hrs)',
+        sleep_ok: '😐 OK (5-7 hrs)',
+        sleep_poor: '😫 Poor (<5 hrs)',
+
+        // Stress options
+        stress_low: '😌 Low',
+        stress_moderate: '😐 Moderate',
+        stress_high: '😰 High',
+
+        // Activity options
+        activity_yes: '✅ Yes',
+        activity_no: '❌ Not yet',
+
+        // Mood options
+        mood_great: '😊 Great',
+        mood_good: '🙂 Good',
+        mood_okay: '😐 Okay',
+        mood_low: '😔 Low',
+
+        // Health summary
+        health_title: '📊 Your Health Summary',
+        health_activity: 'Activity This Week',
+        health_steps: 'steps',
+        health_active_mins: 'active minutes',
+        health_sleep: 'Avg Sleep',
+        health_heart: 'Heart Health Score',
+
+        // Challenges
+        challenges_title: '🏆 Challenges',
+        challenges_join: 'Join Challenge',
+        challenges_progress: 'Your Progress',
+
+        // Settings
+        settings_title: '⚙️ Settings',
+        settings_language: 'Language',
+        settings_notifications: 'Notifications',
+        settings_privacy: 'Privacy',
+        settings_account: 'Account',
+        language_updated: '✅ Done. Language updated.',
+
+        // Content Library
+        content_title: '📚 Content Library',
+        content_loading: 'Loading content...',
+        content_explore: 'Explore workouts, recipes, and wellness content.',
+        content_watch: '▶️ Watch Video',
+        content_listen: '🎧 Listen Now',
+        content_complete: '✅ Mark Complete',
+        content_like: '❤️ Like',
+        content_more: '📚 More Content',
+
+        // Misc
+        coins_label: '🪙 {count} coins',
+        loading: 'Loading...',
+        error_generic: 'Something went wrong. Please try again.',
+    },
+
+    isiZulu: {
+        // Menu items
+        menu_checkin: '✅ Bhalisela',
+        menu_ai: '🤖 AI Ukuhlaziya',
+        menu_content: '📚 Umtapo Wokuqukethwe',
+        menu_health: '📊 Isifinyezo Sempilo',
+        menu_facescan: '🫀 Skena Ubuso',
+        menu_challenges: '🏆 Izinselelo',
+        menu_score: '⭐ Iphuzu Lami',
+        menu_activity: '🏃 Bhala Umsebenzi',
+        menu_coins: '🪙 Izinhlamvu & Imivuzo',
+        menu_meal: '🍽 Skena Ukudla',
+        menu_settings: '⚙️ Izilungiselelo',
+        menu_help: '❓ Usizo',
+        menu_back: 'Imenyu',
+
+        // Common actions
+        btn_continue: 'Qhubeka',
+        btn_skip: 'Yeqa',
+        btn_done: 'Kwenziwe',
+        btn_cancel: 'Khansela',
+        btn_yes: 'Yebo',
+        btn_no: 'Cha',
+        btn_back: '← Emuva',
+
+        // Greetings
+        welcome_back: 'Wamkelekile futhi, {name}! 👋',
+        what_to_do: 'Ufuna ukwenzani namuhla?',
+        hey_name: 'Sawubona {name}! Ufuna ukwenzani?',
+
+        // Check-in
+        checkin_start: 'Ake senze ukubhalisela kwakho kwansuku zonke! Lokhu kusisiza ukulandelela uhambo lwakho lwempilo.',
+        checkin_sleep: 'Ulele kanjani izolo ebusuku?',
+        checkin_stress: 'Zinjani izinga lakho lokucindezeleka namuhla?',
+        checkin_active: 'Ubusebenza namuhla?',
+        checkin_mood: 'Uzizwa kanjani manje?',
+        checkin_complete: '🎉 Ukubhalisela kuphelile!',
+        checkin_coins: 'Uzuze izinhlamvu ezingu-{coins} ngokubhalisela namuhla!',
+        checkin_streak: '🔥 Usuku lwama-{days} olulandelayo! Qhubeka!',
+
+        // Sleep options
+        sleep_great: '😴 Kuhle (7-9 amahora)',
+        sleep_ok: '😐 Kulungile (5-7 amahora)',
+        sleep_poor: '😫 Kubi (<5 amahora)',
+
+        // Stress options
+        stress_low: '😌 Phansi',
+        stress_moderate: '😐 Maphakathi',
+        stress_high: '😰 Phezulu',
+
+        // Activity options
+        activity_yes: '✅ Yebo',
+        activity_no: '❌ Cha okwamanje',
+
+        // Mood options
+        mood_great: '😊 Kuhle kakhulu',
+        mood_good: '🙂 Kuhle',
+        mood_okay: '😐 Kulungile',
+        mood_low: '😔 Phansi',
+
+        // Health summary
+        health_title: '📊 Isifinyezo Sempilo Yakho',
+        health_activity: 'Umsebenzi Waleviki',
+        health_steps: 'izinyathelo',
+        health_active_mins: 'imizuzu esebenzayo',
+        health_sleep: 'Ubuthongo Obujwayelekile',
+        health_heart: 'Iphuzu Lempilo Yenhliziyo',
+
+        // Challenges
+        challenges_title: '🏆 Izinselelo',
+        challenges_join: 'Joyina Inselelo',
+        challenges_progress: 'Inqubekelaphambili Yakho',
+
+        // Settings
+        settings_title: '⚙️ Izilungiselelo',
+        settings_language: 'Ulimi',
+        settings_notifications: 'Izaziso',
+        settings_privacy: 'Ubumfihlo',
+        settings_account: 'I-Akhawunti',
+        language_updated: '✅ Kwenziwe. Ulimi lubuyekeziwe.',
+
+        // Content Library
+        content_title: '📚 Umtapo Wokuqukethwe',
+        content_loading: 'Iyalayisha...',
+        content_explore: 'Hlola ukuzivocavoca, izindlela zokudla, nokuqukethwe kwempilo.',
+        content_watch: '▶️ Bukela Ividiyo',
+        content_listen: '🎧 Lalela Manje',
+        content_complete: '✅ Phothula',
+        content_like: '❤️ Thanda',
+        content_more: '📚 Okuningi',
+
+        // Misc
+        coins_label: '🪙 izinhlamvu ezingu-{count}',
+        loading: 'Iyalayisha...',
+        error_generic: 'Kukhona okungahambanga kahle. Sicela uzame futhi.',
+    },
+
+    Afrikaans: {
+        // Menu items
+        menu_checkin: '✅ Inklok',
+        menu_ai: '🤖 KI Insigte',
+        menu_content: '📚 Inhoud Biblioteek',
+        menu_health: '📊 Gesondheid Opsomming',
+        menu_facescan: '🫀 Gesig Skandering',
+        menu_challenges: '🏆 Uitdagings',
+        menu_score: '⭐ My Telling',
+        menu_activity: '🏃 Teken Aktiwiteit',
+        menu_coins: '🪙 Munte & Belonings',
+        menu_meal: '🍽 Maaltyd Skandering',
+        menu_settings: '⚙️ Instellings',
+        menu_help: '❓ Hulp',
+        menu_back: 'Kieslys',
+
+        // Common actions
+        btn_continue: 'Gaan voort',
+        btn_skip: 'Slaan oor',
+        btn_done: 'Klaar',
+        btn_cancel: 'Kanselleer',
+        btn_yes: 'Ja',
+        btn_no: 'Nee',
+        btn_back: '← Terug',
+
+        // Greetings
+        welcome_back: 'Welkom terug, {name}! 👋',
+        what_to_do: 'Wat wil jy vandag doen?',
+        hey_name: 'Haai {name}! Wat wil jy doen?',
+
+        // Check-in
+        checkin_start: 'Kom ons doen jou daaglikse inklok! Dit help ons om jou welstand reis te volg.',
+        checkin_sleep: 'Hoe het jy gisteraand geslaap?',
+        checkin_stress: 'Hoe is jou stresvlakke vandag?',
+        checkin_active: 'Was jy vandag aktief?',
+        checkin_mood: 'Hoe voel jy nou?',
+        checkin_complete: '🎉 Inklok voltooi!',
+        checkin_coins: 'Jy het {coins} munte verdien vir vandag se inklok!',
+        checkin_streak: '🔥 {days}-dag reeks! Hou so aan!',
+
+        // Sleep options
+        sleep_great: '😴 Goed (7-9 ure)',
+        sleep_ok: '😐 OK (5-7 ure)',
+        sleep_poor: '😫 Sleg (<5 ure)',
+
+        // Stress options
+        stress_low: '😌 Laag',
+        stress_moderate: '😐 Matig',
+        stress_high: '😰 Hoog',
+
+        // Activity options
+        activity_yes: '✅ Ja',
+        activity_no: '❌ Nog nie',
+
+        // Mood options
+        mood_great: '😊 Fantasties',
+        mood_good: '🙂 Goed',
+        mood_okay: '😐 OK',
+        mood_low: '😔 Af',
+
+        // Health summary
+        health_title: '📊 Jou Gesondheid Opsomming',
+        health_activity: 'Aktiwiteit Hierdie Week',
+        health_steps: 'stappe',
+        health_active_mins: 'aktiewe minute',
+        health_sleep: 'Gem. Slaap',
+        health_heart: 'Hart Gesondheid Telling',
+
+        // Challenges
+        challenges_title: '🏆 Uitdagings',
+        challenges_join: 'Sluit Aan by Uitdaging',
+        challenges_progress: 'Jou Vordering',
+
+        // Settings
+        settings_title: '⚙️ Instellings',
+        settings_language: 'Taal',
+        settings_notifications: 'Kennisgewings',
+        settings_privacy: 'Privaatheid',
+        settings_account: 'Rekening',
+        language_updated: '✅ Klaar. Taal opgedateer.',
+
+        // Content Library
+        content_title: '📚 Inhoud Biblioteek',
+        content_loading: 'Laai tans...',
+        content_explore: 'Verken oefeninge, resepte, en welstand inhoud.',
+        content_watch: '▶️ Kyk Video',
+        content_listen: '🎧 Luister Nou',
+        content_complete: '✅ Merk Voltooi',
+        content_like: '❤️ Hou van',
+        content_more: '📚 Meer Inhoud',
+
+        // Misc
+        coins_label: '🪙 {count} munte',
+        loading: 'Laai tans...',
+        error_generic: 'Iets het verkeerd geloop. Probeer asseblief weer.',
+    }
+};
+
+// Translation helper function
+function t(key, params = {}) {
+    const lang = AppState.user?.language || 'English';
+    const langStrings = translations[lang] || translations.English;
+    let text = langStrings[key] || translations.English[key] || key;
+
+    // Replace placeholders like {name}, {coins}, etc.
+    Object.keys(params).forEach(param => {
+        text = text.replace(new RegExp(`\\{${param}\\}`, 'g'), params[param]);
+    });
+
+    return text;
+}
+
 // Content Library API
 const CONTENT_API_URL = 'https://cms.strove.ai/api/library-contents';
 const CONTENT_API_BASE = 'https://lively-crystal-f13b3a6e8c.strapiapp.com/api/library-contents';
@@ -585,26 +896,28 @@ async function showMainMenu() {
     updateDebugPanel();
 
     // Show personalized menu header with stats
-    const greeting = AppState.user.firstName ? `Hey ${AppState.user.firstName}!` : 'Hey there!';
-    const streakBadge = AppState.streak > 0 ? `🔥 ${AppState.streak} day streak` : '';
-    const coinsBadge = `🪙 ${AppState.coins} coins`;
+    const greeting = AppState.user.firstName
+        ? t('hey_name', { name: AppState.user.firstName })
+        : t('what_to_do');
+    const streakBadge = AppState.streak > 0 ? `🔥 ${AppState.streak}` : '';
+    const coinsBadge = t('coins_label', { count: AppState.coins });
     const statsLine = [streakBadge, coinsBadge].filter(Boolean).join(' • ');
 
-    await botMessage(`${greeting} ${statsLine ? `<div class="menu-stats">${statsLine}</div>` : ''}\n\nWhat would you like to do?`);
+    await botMessage(`${greeting} ${statsLine ? `<div class="menu-stats">${statsLine}</div>` : ''}`);
 
     setButtons([
-        { label: '✅ Check-in', action: 'menu_checkin', type: 'primary' },
-        { label: '🤖 AI Insights', action: 'menu_ai' },
-        { label: '📚 Content Library', action: 'menu_content' },
-        { label: '📊 Health summary', action: 'menu_summary' },
-        { label: '🫀 Face scan', action: 'menu_facescan' },
-        { label: '🏆 Challenges', action: 'menu_challenges' },
-        { label: '⭐ My Score', action: 'menu_score' },
-        { label: '🏃 Log activity', action: 'menu_log' },
-        { label: '🪙 Coins & rewards', action: 'menu_coins' },
-        { label: '🍽 Meal scan', action: 'menu_meal' },
-        { label: '⚙️ Settings', action: 'menu_settings' },
-        { label: '❓ Help', action: 'menu_help' }
+        { label: t('menu_checkin'), action: 'menu_checkin', type: 'primary' },
+        { label: t('menu_ai'), action: 'menu_ai' },
+        { label: t('menu_content'), action: 'menu_content' },
+        { label: t('menu_health'), action: 'menu_summary' },
+        { label: t('menu_facescan'), action: 'menu_facescan' },
+        { label: t('menu_challenges'), action: 'menu_challenges' },
+        { label: t('menu_score'), action: 'menu_score' },
+        { label: t('menu_activity'), action: 'menu_log' },
+        { label: t('menu_coins'), action: 'menu_coins' },
+        { label: t('menu_meal'), action: 'menu_meal' },
+        { label: t('menu_settings'), action: 'menu_settings' },
+        { label: t('menu_help'), action: 'menu_help' }
     ]);
 }
 
@@ -636,20 +949,18 @@ async function startCheckIn() {
         await delay(500);
     }
 
-    await botMessage("Let's do your check-in. This takes about 30 seconds.");
+    await botMessage(t('checkin_start'));
     AppState.flowStep = 1;
     await showCheckInQ1();
 }
 
 async function showCheckInQ1() {
-    await botMessage("How did you sleep last night?");
+    await botMessage(t('checkin_sleep'));
     setButtons([
-        { label: 'Very poor', action: 'sleep', value: 1 },
-        { label: 'Poor', action: 'sleep', value: 2 },
-        { label: 'Okay', action: 'sleep', value: 3 },
-        { label: 'Good', action: 'sleep', value: 4 },
-        { label: 'Very good', action: 'sleep', value: 5 },
-        { label: 'Skip', action: 'sleep', value: null, type: 'secondary' }
+        { label: t('sleep_poor'), action: 'sleep', value: 1 },
+        { label: t('sleep_ok'), action: 'sleep', value: 3 },
+        { label: t('sleep_great'), action: 'sleep', value: 5 },
+        { label: t('btn_skip'), action: 'sleep', value: null, type: 'secondary' }
     ]);
 }
 
@@ -665,65 +976,63 @@ async function handleCheckInStep(action, value) {
             break;
 
         case 1: // Sleep
-            addMessage(value ? ['Very poor', 'Poor', 'Okay', 'Good', 'Very good'][value - 1] : 'Skip', true);
+            addMessage(value ? [t('sleep_poor'), '', t('sleep_ok'), '', t('sleep_great')][value - 1] : t('btn_skip'), true);
             AppState.tempData.sleep = value;
             AppState.flowStep = 2;
-            await botMessage("How stressed do you feel today?");
+            await botMessage(t('checkin_stress'));
             setButtons([
-                { label: 'Very low', action: 'stress', value: 1 },
-                { label: 'Low', action: 'stress', value: 2 },
-                { label: 'Moderate', action: 'stress', value: 3 },
-                { label: 'High', action: 'stress', value: 4 },
-                { label: 'Very high', action: 'stress', value: 5 },
-                { label: 'Skip', action: 'stress', value: null, type: 'secondary' }
+                { label: t('stress_low'), action: 'stress', value: 1 },
+                { label: t('stress_moderate'), action: 'stress', value: 3 },
+                { label: t('stress_high'), action: 'stress', value: 5 },
+                { label: t('btn_skip'), action: 'stress', value: null, type: 'secondary' }
             ]);
             break;
 
         case 2: // Stress
-            addMessage(value ? ['Very low', 'Low', 'Moderate', 'High', 'Very high'][value - 1] : 'Skip', true);
+            addMessage(value ? [t('stress_low'), '', t('stress_moderate'), '', t('stress_high')][value - 1] : t('btn_skip'), true);
             AppState.tempData.stress = value;
             AppState.flowStep = 3;
-            await botMessage("Do you plan to be active today?");
+            await botMessage(t('checkin_active'));
             setButtons([
-                { label: 'Yes', action: 'active', value: 'yes' },
-                { label: 'Not sure', action: 'active', value: 'maybe' },
-                { label: 'No', action: 'active', value: 'no' }
+                { label: t('activity_yes'), action: 'active', value: 'yes' },
+                { label: t('activity_no'), action: 'active', value: 'no' }
             ]);
             break;
 
         case 3: // Activity plan
-            addMessage(value.charAt(0).toUpperCase() + value.slice(1), true);
+            addMessage(value === 'yes' ? t('activity_yes') : t('activity_no'), true);
             AppState.tempData.activePlan = value;
-            AppState.flowStep = 4;
-            await botMessage("How's your diet and hydration so far today?");
+            AppState.flowStep = 5; // Skip diet, go to mood
+            await botMessage(t('checkin_mood'));
             setButtons([
-                { label: 'Poor', action: 'diet', value: 1 },
-                { label: 'Okay', action: 'diet', value: 2 },
-                { label: 'Good', action: 'diet', value: 3 },
-                { label: 'Skip', action: 'diet', value: null, type: 'secondary' }
+                { label: t('mood_great'), action: 'mood', value: 5 },
+                { label: t('mood_good'), action: 'mood', value: 4 },
+                { label: t('mood_okay'), action: 'mood', value: 3 },
+                { label: t('mood_low'), action: 'mood', value: 2 },
+                { label: t('btn_skip'), action: 'mood', value: null, type: 'secondary' }
             ]);
             break;
 
-        case 4: // Diet
-            addMessage(value ? ['Poor', 'Okay', 'Good'][value - 1] : 'Skip', true);
+        case 4: // Diet (skipped for now)
+            addMessage(value ? ['Poor', 'Okay', 'Good'][value - 1] : t('btn_skip'), true);
             AppState.tempData.diet = value;
             AppState.flowStep = 5;
-            await botMessage("How's your mood right now?");
+            await botMessage(t('checkin_mood'));
             setButtons([
-                { label: '😊 Great', action: 'mood', value: 5 },
-                { label: '🙂 Good', action: 'mood', value: 4 },
-                { label: '😐 Okay', action: 'mood', value: 3 },
-                { label: '😔 Low', action: 'mood', value: 2 },
-                { label: 'Skip', action: 'mood', value: null, type: 'secondary' }
+                { label: t('mood_great'), action: 'mood', value: 5 },
+                { label: t('mood_good'), action: 'mood', value: 4 },
+                { label: t('mood_okay'), action: 'mood', value: 3 },
+                { label: t('mood_low'), action: 'mood', value: 2 },
+                { label: t('btn_skip'), action: 'mood', value: null, type: 'secondary' }
             ]);
             break;
 
         case 5: // Mood
             if (value) {
-                const moodLabels = ['', '', '😔 Low', '😐 Okay', '🙂 Good', '😊 Great'];
+                const moodLabels = ['', '', t('mood_low'), t('mood_okay'), t('mood_good'), t('mood_great')];
                 addMessage(moodLabels[value], true);
             } else {
-                addMessage('Skip', true);
+                addMessage(t('btn_skip'), true);
             }
             AppState.tempData.mood = value;
             completeCheckIn();
@@ -771,17 +1080,17 @@ async function completeCheckIn() {
     }
 
     // Build celebration message based on context
-    let celebration = "✅ Check-in complete!";
-    let streakMessage = `🔥 ${AppState.streak} day streak`;
+    let celebration = t('checkin_complete');
+    let streakMessage = t('checkin_streak', { days: AppState.streak });
 
     if (isFirstCheckIn) {
-        celebration = "🎉 First check-in complete! You've taken the first step — this is where it all begins.";
+        celebration = t('checkin_complete');
     } else if (AppState.streak === 7) {
-        streakMessage = "🔥 One week strong! You're building a real habit here.";
+        streakMessage = t('checkin_streak', { days: 7 });
     } else if (AppState.streak === 30) {
-        streakMessage = "🏆 30 days! Incredible consistency — you're crushing it!";
+        streakMessage = t('checkin_streak', { days: 30 });
     } else if (AppState.streak > 7) {
-        streakMessage = `🔥 ${AppState.streak} days strong — amazing consistency!`;
+        streakMessage = t('checkin_streak', { days: AppState.streak });
     }
 
     let milestoneMessage = coinMilestone ? `\n\n🎉 <strong>Milestone:</strong> ${coinMilestone}` : '';
@@ -802,7 +1111,7 @@ async function completeCheckIn() {
         setButtons([
             { label: 'Health summary', action: 'menu_summary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     }
 
@@ -832,7 +1141,7 @@ async function showHealthSummary() {
         setButtons([
             { label: '🔗 Connect', action: 'goto_connect', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
@@ -903,7 +1212,7 @@ async function showHealthSummary() {
     setButtons([
         { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
         { label: 'Monthly summary', action: 'monthly_summary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -939,7 +1248,7 @@ async function showMonthlySummary() {
     setButtons([
         { label: '🤖 Get AI insights', action: 'menu_ai', type: 'primary' },
         { label: 'Weekly summary', action: 'menu_summary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -963,7 +1272,7 @@ async function showChallenges() {
         { label: 'Join challenge', action: 'join_challenge', type: 'primary' },
         { label: 'My progress', action: 'challenge_progress' },
         { label: 'Reminder settings', action: 'challenge_reminders' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -977,7 +1286,7 @@ async function joinChallenge() {
         setButtons([
             { label: 'My progress', action: 'challenge_progress', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     } else {
         await botMessage("✅ You're in!\n\nTo track progress automatically, connect a fitness app.\nOr log activity manually when you exercise.");
@@ -985,7 +1294,7 @@ async function joinChallenge() {
             { label: '🔗 Connect', action: 'goto_connect', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
             { label: 'My progress', action: 'challenge_progress' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     }
     updateDebugPanel();
@@ -1005,7 +1314,7 @@ async function showChallengeProgress() {
     setButtons([
         { label: 'Log activity', action: 'menu_log', type: 'primary' },
         { label: 'Health summary', action: 'menu_summary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1031,7 +1340,7 @@ async function showMyScore() {
         setButtons([
             { label: '🔗 Connect', action: 'goto_connect', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
@@ -1049,7 +1358,7 @@ async function showMyScore() {
     setButtons([
         { label: 'Improve my score', action: 'improve_score', type: 'primary' },
         { label: 'Health summary', action: 'menu_summary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1059,7 +1368,7 @@ async function showImproveScore() {
     setButtons([
         { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
         { label: 'Log activity', action: 'menu_log' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1077,7 +1386,7 @@ async function showLogActivity() {
     setButtons([
         { label: 'Log manually', action: 'log_manual', type: 'primary' },
         { label: 'Connect fitness app', action: 'goto_connect' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1196,7 +1505,7 @@ async function completeActivityLog() {
     setButtons([
         { label: 'Health summary', action: 'menu_summary' },
         { label: 'Challenges', action: 'menu_challenges' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
     updateDebugPanel();
@@ -1231,13 +1540,13 @@ async function handleConnectStep(action, value) {
         await botMessage(`Perfect. We'll open a secure link to connect your account.\n\n<a href="#" onclick="simulateConnection('${value}'); return false;">🔗 Connect ${value}</a>`);
 
         setButtons([
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     } else if (action === 'connect_other') {
         await botMessage("No problem. You can also log activity manually for now.\n\nWe'll add more services soon!");
         setButtons([
             { label: 'Log manually', action: 'menu_log', type: 'primary' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     }
 }
@@ -1254,7 +1563,7 @@ window.simulateConnection = async function(service) {
 
     setButtons([
         { label: '✅ Do check-in', action: 'menu_checkin', type: 'primary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
     updateDebugPanel();
@@ -1274,7 +1583,7 @@ async function showCoins() {
         { label: 'Redeem rewards', action: 'redeem_rewards', type: 'primary' },
         { label: 'How to earn more', action: 'earn_more' },
         { label: 'Recent earnings', action: 'recent_earnings' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1283,7 +1592,7 @@ async function showRecentEarnings() {
 
     setButtons([
         { label: 'Redeem rewards', action: 'redeem_rewards', type: 'primary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1294,7 +1603,7 @@ async function showEarnMore() {
         { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
         { label: '🫀 Face scan', action: 'menu_facescan' },
         { label: 'Log activity', action: 'menu_log' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -1305,13 +1614,13 @@ async function showRedeemRewards() {
         setButtons([
             { label: 'Check-in', action: 'menu_checkin', type: 'primary' },
             { label: 'Log activity', action: 'menu_log' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     } else {
         await botMessage(`🎁 Popular rewards\n\n• Coffee voucher (100 coins)\n• Wellness item (200 coins)\n• Fitness gear (500 coins)\n\nRedeem securely here:\n<a href="#">🔗 Redeem rewards</a>`);
 
         setButtons([
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     }
 }
@@ -1361,7 +1670,7 @@ async function handleMealScan(input) {
 
         setButtons([
             { label: 'Scan another', action: 'menu_meal', type: 'primary' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
     }
 }
@@ -1752,7 +2061,7 @@ ${results.bpWarning || results.bmiWarning ?
     setButtons([
         { label: 'View Health Summary', action: 'menu_summary', type: 'primary' },
         { label: 'Log Activity', action: 'menu_log' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
     updateDebugPanel();
@@ -1775,7 +2084,7 @@ async function startAIChat() {
         { label: '🍽 Nutrition tips', action: 'ai_nutrition' },
         { label: '😴 Sleep insights', action: 'ai_sleep' },
         { label: '💪 Motivation', action: 'ai_motivation' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2009,7 +2318,7 @@ async function processAIChat(userMessage) {
         { label: '💬 Ask more', action: 'ai_continue', type: 'primary' },
         { label: '📊 Analyze my week', action: 'ai_analyze_week' },
         { label: '💪 Motivation', action: 'ai_motivation' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2089,7 +2398,7 @@ async function showContentLibrary() {
         await botMessage("Unable to load content right now. Please try again later.");
         setButtons([
             { label: 'Try again', action: 'menu_content', type: 'primary' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
@@ -2107,7 +2416,7 @@ async function showContentLibrary() {
         { label: '⭐ Featured', action: 'content_featured', type: 'primary' },
         ...categoryButtons,
         { label: '🔍 Search', action: 'content_search' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2150,7 +2459,7 @@ async function showContentList(items, title) {
         await botMessage(`${title}\n\nNo content found in this category.`);
         setButtons([
             { label: '← Back', action: 'menu_content' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
@@ -2184,7 +2493,7 @@ async function showContentList(items, title) {
     setButtons([
         ...itemButtons,
         { label: '← Back', action: 'menu_content' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
     // Enable number selection mode
@@ -2208,7 +2517,7 @@ async function showContentDetail(documentId) {
         await botMessage("Content not found.");
         setButtons([
             { label: '← Back', action: 'menu_content' },
-            { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+            { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
         ]);
         return;
     }
@@ -2317,7 +2626,7 @@ async function showVideoContent(item, coverUrl, duration, points, category) {
     buttons.push(
         { label: '❤️ Like', action: 'content_like', value: item.documentId },
         { label: '📚 More Content', action: 'menu_content' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     );
 
     setButtons(buttons);
@@ -2382,7 +2691,7 @@ async function showAudioContent(item, coverUrl, duration, points, category) {
     buttons.push(
         { label: '❤️ Like', action: 'content_like', value: item.documentId },
         { label: '📚 More Content', action: 'menu_content' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     );
 
     setButtons(buttons);
@@ -2420,7 +2729,7 @@ async function showArticleContent(item, coverUrl, category) {
     setButtons([
         { label: '❤️ Like', action: 'content_like', value: item.documentId },
         { label: '📚 More Content', action: 'menu_content', type: 'primary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2448,7 +2757,7 @@ async function completeContent(documentId) {
 
     setButtons([
         { label: '📚 More Content', action: 'menu_content', type: 'primary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 
     updateDebugPanel();
@@ -2459,7 +2768,7 @@ async function likeContent(documentId) {
 
     setButtons([
         { label: '📚 More Content', action: 'menu_content', type: 'primary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2527,7 +2836,7 @@ async function showSettings() {
         { label: 'Connected apps', action: 'settings_apps' },
         { label: 'Language', action: 'settings_language' },
         { label: 'Stop messages', action: 'settings_stop', type: 'secondary' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2549,7 +2858,7 @@ async function handleSettingsStep(action, value) {
             await botMessage("✅ Done. Reminder preferences updated.");
             setButtons([
                 { label: 'Settings', action: 'menu_settings' },
-                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+                { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2593,7 +2902,7 @@ async function handleSettingsStep(action, value) {
             await botMessage(`✅ ${disconnected} disconnected.`);
             setButtons([
                 { label: 'Settings', action: 'menu_settings' },
-                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+                { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2610,10 +2919,10 @@ async function handleSettingsStep(action, value) {
             addMessage(value, true);
             AppState.user.language = value;
             saveState();
-            await botMessage("✅ Done. Language updated.");
+            await botMessage(t('language_updated'));
             setButtons([
-                { label: 'Settings', action: 'menu_settings' },
-                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+                { label: t('menu_settings'), action: 'menu_settings' },
+                { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2646,7 +2955,7 @@ async function startHelpFlow() {
         { label: 'How to use Strove Lite', action: 'help_usage' },
         { label: 'Contact support', action: 'help_support' },
         { label: 'Privacy & data', action: 'help_privacy' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
 }
 
@@ -2655,7 +2964,7 @@ async function handleHelpStep(action, value) {
         case 'help_usage':
             await botMessage("Here are the main commands:\n\n• Check-in (daily)\n• Health summary (weekly/monthly)\n• Log activity\n• Coins / Redeem\n• Challenges\n\nType MENU any time to see options.\nType HELP for assistance.\nType STOP to unsubscribe.");
             setButtons([
-                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+                { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
             ]);
             break;
 
@@ -2680,7 +2989,7 @@ async function handleHelpStep(action, value) {
         case 'help_privacy':
             await botMessage("We only use your data to provide Strove services in line with our privacy policy.\n\nYou can:\n• opt out any time (type STOP)\n• request data access or deletion via a secure form\n\n<a href='#'>Request data access/deletion</a>");
             setButtons([
-                { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+                { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
             ]);
             break;
     }
@@ -2691,7 +3000,7 @@ async function handleSupportDescription(input) {
     AppState.tempData = {};
     setButtons([
         { label: 'Help menu', action: 'menu_help' },
-        { label: 'Menu', action: 'goto_menu', type: 'secondary' }
+        { label: t('menu_back'), action: 'goto_menu', type: 'secondary' }
     ]);
     AppState.currentFlow = FLOWS.HELP;
 }
